@@ -102,7 +102,7 @@ export function placeInField(store: DocStore, signature: Signature, field: Field
       items: items.map((i) => (i.id === existing.id ? item : i)),
       undo: [...s.undo, items],
       redo: [],
-      selected: item.id,
+      selected: [item.id],
       tool: null,
     }))
   } else addItem(store, item)

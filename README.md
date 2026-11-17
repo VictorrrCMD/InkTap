@@ -12,7 +12,10 @@ Rellena formularios PDF y fírmalos en el navegador: con el mouse, escribiendo t
 - **Descargar la firma** en SVG (vectorial) o PNG (fondo transparente) desde su barra, con su color y su giro. La firma escrita también sale vectorial en SVG.
 - **Color después de colocar:** firmas, textos y marcas se pueden poner en azul, negro o cualquier color desde su barra. Las marcas pequeñas muestran un punto de arrastre por fuera para moverlas sin taparlas.
 - **Descarga el PDF aplanado:** lo que llenaste y firmaste queda fijo en la hoja. En el celular, además, se puede compartir.
-- Deshacer (Ctrl+Z), mover con flechas, borrar con Supr, colocar con Enter, modo claro y oscuro, y uso completo con teclado.
+- **Varios a la vez:** Mayús o Ctrl con clic suma elementos a la selección (Ctrl+A los toma todos) y se mueven, giran o borran juntos. Un clic fuera de la selección la suelta.
+- **Copiar y pegar:** Ctrl+C, Ctrl+X y Ctrl+V, o Copiar en la barra del elemento y Pegar en la barra de abajo. Lo pegado cae en la página que estás viendo. Ctrl+D duplica.
+- **Zoom con los dedos:** en el celular se pellizca para acercar o alejar el documento y se arrastra para moverse por él; en la computadora, Ctrl+rueda o el pellizco del trackpad. Al elegir qué colocar en el celular, un dedo animado muestra dónde tocar.
+- Deshacer (Ctrl+Z) y rehacer (Ctrl+Y o Ctrl+Mayús+Z), mover con flechas, borrar con Supr, colocar con Enter, modo claro y oscuro, y uso completo con teclado.
 
 ## Privacidad
 
@@ -88,6 +91,8 @@ node tests/keyboard.mjs            # recorrido solo con teclado y enlaces rotos 
 node tests/photo.mjs               # firma desde foto (este equipo y celular), color y punto de arrastre
 node tests/rotate.mjs              # girar elementos, descargar la firma en SVG y PNG, PDF con elementos girados
 node tests/legal.mjs               # páginas legales, enlaces y el logo como regreso al inicio
+node tests/select.mjs              # selección múltiple, copiar, pegar, deshacer, rehacer y zoom con Ctrl+rueda
+node tests/touch.mjs               # celular: pellizcar, arrastrar, el dedo que indica dónde tocar, copiar y pegar
 node tests/verify-output.mjs <pdf> # renderiza un PDF exportado y extrae su texto
 ```
 

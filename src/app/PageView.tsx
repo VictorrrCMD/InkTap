@@ -91,14 +91,11 @@ export const PageView = memo(function PageView({ index, sheet, onSheet, onSign, 
     return { x: (e.clientX - rect.left) / zoom, y: (e.clientY - rect.top) / zoom }
   }
 
+  // Without a tool armed, the click goes on to the viewport, which clears the selection.
   const onClick = (e: MouseEvent<HTMLDivElement>) => {
     const armed = store.get().tool
-    if (!armed) {
-      if (e.target === e.currentTarget || (e.target as HTMLElement).classList.contains('page__layer')) {
-        store.set({ selected: null, editing: null })
-      }
-      return
-    }
+    if (!armed) return
+    e.stopPropagation()
     const { x, y } = localPoint(e)
     placeTool(store, armed, index, x, y)
   }
@@ -148,7 +145,7 @@ export const PageView = memo(function PageView({ index, sheet, onSheet, onSign, 
   )
 })
 
-function GhostShape({ tool, zoom, pageWidth }: { tool: Tool; zoom: number; pageWidth: number }) {
+export function GhostShape({ tool, zoom, pageWidth }: { tool: Tool; zoom: number; pageWidth: number }) {
   if (tool.kind === 'signature') {
     const { w, h } = signatureSize(tool.signature, pageWidth)
     return (

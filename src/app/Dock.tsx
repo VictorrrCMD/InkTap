@@ -1,7 +1,8 @@
-import { CalendarBlank, CheckCircle, CheckSquare, Signature as SignatureIcon, TextT } from '@phosphor-icons/react'
+import { CalendarBlank, CheckCircle, CheckSquare, ClipboardText, Signature as SignatureIcon, TextT } from '@phosphor-icons/react'
 import { useMemo } from 'react'
 import type { Field } from '../pdf/model'
 import { fillableFields, isFieldDone, useDoc, useDocStore, type Tool } from './doc'
+import { paste } from './selection'
 
 const reduceMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
@@ -22,9 +23,10 @@ export function Dock({ touch, onSignature, onField }: Props) {
   const store = useDocStore()
   const tool = useDoc((s) => s.tool)
   const signed = useDoc((s) => s.items.some((i) => i.type === 'signature'))
+  const copied = useDoc((s) => s.clipboard.length)
 
   const arm = (kind: Exclude<Tool['kind'], 'signature'>) =>
-    store.set((s) => ({ tool: s.tool?.kind === kind ? null : { kind }, selected: null, editing: null }))
+    store.set((s) => ({ tool: s.tool?.kind === kind ? null : { kind }, selected: [], editing: null }))
 
   return (
     <div className="dock-wrap">
@@ -54,6 +56,15 @@ export function Dock({ touch, onSignature, onField }: Props) {
           <CheckSquare size={22} aria-hidden />
           <span>Marca</span>
         </button>
+        {copied ? (
+          <>
+            <span className="dock__sep" aria-hidden />
+            <button type="button" className="dock__btn" onClick={() => paste(store)} title="Pegar en la página que estás viendo (Ctrl+V)">
+              <ClipboardText size={22} aria-hidden />
+              <span>Pegar</span>
+            </button>
+          </>
+        ) : null}
       </div>
     </div>
   )

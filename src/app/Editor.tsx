@@ -12,6 +12,8 @@ import { FieldSheet, type SheetTarget } from './FieldSheet'
 import { fitFontSize } from './fieldText'
 import { docBaseline } from './metrics'
 import { LINE_HEIGHT, placeInField, placeTool } from './place'
+import { copySelection, cutSelection, deleteSelection, duplicateSelection, paste, selectAll } from './selection'
+import { TapHint } from './TapHint'
 import { TopBar } from './TopBar'
 import { Viewport } from './Viewport'
 
@@ -33,6 +35,7 @@ export function Editor({ store, onClose }: { store: DocStore; onClose: () => voi
   const touch = useMedia('(pointer: coarse)')
   const sheetMode = useMedia('(pointer: coarse) and (max-width: 820px)')
   const signDialog = useStore(store, (s) => s.signDialog)
+  const tool = useStore(store, (s) => s.tool)
   const session = useStore(store, (s) => s.lastSignature)
   const [sheet, setSheet] = useState<SheetTarget | null>(null)
   const [busy, setBusy] = useState(false)
@@ -40,7 +43,7 @@ export function Editor({ store, onClose }: { store: DocStore; onClose: () => voi
   const confirmId = useId()
 
   const openSign = useCallback(
-    (field?: Field) => store.set({ signDialog: { open: true, fieldId: field?.id }, tool: null, selected: null, editing: null }),
+    (field?: Field) => store.set({ signDialog: { open: true, fieldId: field?.id }, tool: null, selected: [], editing: null }),
     [store],
   )
 
@@ -93,18 +96,29 @@ export function Editor({ store, onClose }: { store: DocStore; onClose: () => voi
   }, [sheetMode, store])
 
   useEffect(() => {
+    // A focused item handles its own keys first; these work wherever focus is,
+    // except inside a text box, where the browser's own copy, paste and undo apply.
     const onKey = (e: KeyboardEvent) => {
       const state = store.get()
-      if (state.signDialog.open || confirmClose) return
+      if (state.signDialog.open || confirmClose || e.defaultPrevented) return
       const mod = e.ctrlKey || e.metaKey
-      if (mod && e.key.toLowerCase() === 'z' && !editableTarget(e.target)) {
+      const key = e.key.toLowerCase()
+      const typing = editableTarget(e.target)
+      const picked = state.selected.length > 0
+      const run = (action: () => void) => {
         e.preventDefault()
-        if (e.shiftKey) redo(store)
-        else undo(store)
-      } else if (mod && e.key.toLowerCase() === 'y' && !editableTarget(e.target)) {
-        e.preventDefault()
-        redo(store)
-      } else if (e.key === 'Escape' && state.tool) {
+        action()
+      }
+      if (mod && !typing && key === 'z') run(() => (e.shiftKey ? redo(store) : undo(store)))
+      else if (mod && !typing && key === 'y') run(() => redo(store))
+      else if (mod && !typing && key === 'c' && picked) run(() => copySelection(store))
+      else if (mod && !typing && key === 'x' && picked) run(() => cutSelection(store))
+      else if (mod && !typing && key === 'v' && state.clipboard.length) run(() => paste(store))
+      else if (mod && !typing && key === 'd' && picked) run(() => duplicateSelection(store))
+      else if (mod && !typing && key === 'a' && state.items.length) run(() => selectAll(store))
+      else if (!mod && !typing && picked && (e.key === 'Delete' || e.key === 'Backspace')) run(() => deleteSelection(store))
+      else if (e.key === 'Escape' && picked && !state.tool) run(() => store.set({ selected: [], editing: null }))
+      else if (e.key === 'Escape' && state.tool) {
         e.preventDefault()
         store.set({ tool: null })
       } else if (e.key === 'Enter' && state.tool && !editableTarget(e.target)) {
@@ -179,6 +193,7 @@ export function Editor({ store, onClose }: { store: DocStore; onClose: () => voi
         <TopBar onClose={requestClose} onDownload={download} busy={busy} />
         <Viewport sheet={sheetMode} onSheet={onSheetField} onSign={openSign} onEditText={onEditText} />
         {!sheet ? <Dock touch={touch} onSignature={() => openSign()} onField={goToField} /> : null}
+        {touch && tool && !sheet ? <TapHint tool={tool} /> : null}
         {sheet ? (
           <FieldSheet
             key={sheet.kind === 'field' ? sheet.field.id : sheet.itemId}
@@ -196,7 +211,7 @@ export function Editor({ store, onClose }: { store: DocStore; onClose: () => voi
           />
         ) : null}
         <p id="item-help" hidden>
-          Arrastra para moverlo. Con el teclado: flechas para mover, R para girar 90 grados (Mayús+R al otro lado), corchetes para girar de 5 en 5, Supr para eliminar, Enter para editar el texto.
+          Arrastra para moverlo. Mayús o Ctrl con clic suma más elementos a la selección. Con el teclado: flechas para mover, R para girar 90 grados (Mayús+R al otro lado), corchetes para girar de 5 en 5, Supr para eliminar, Enter para editar el texto, Ctrl+C y Ctrl+V para copiar y pegar, Ctrl+Z para deshacer.
         </p>
         <SignDialog
           open={signDialog.open}

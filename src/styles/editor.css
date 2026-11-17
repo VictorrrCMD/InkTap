@@ -402,11 +402,13 @@
 
 /* Editor shell */
 
+/* The browser's own pinch would blow up the toolbars too; the document zooms itself instead. */
 .editor {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   height: 100dvh;
   overflow: hidden;
+  touch-action: pan-x pan-y;
 }
 
 .topbar {
@@ -554,6 +556,15 @@
   overflow: auto;
   overscroll-behavior: contain;
   background: var(--canvas);
+}
+
+/* Keeps the scroll area its size while a pinch scales the pages. */
+.viewport__spacer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .pages {
@@ -1002,6 +1013,14 @@
   text-align: center;
 }
 
+.item-bar__count {
+  padding: 0 8px 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
 .item-bar__sep {
   width: 1px;
   height: 20px;
@@ -1073,6 +1092,148 @@
   background: var(--paper-tint);
   outline: 1px solid rgb(33 72 194 / 0.5);
   transform: translate(0, -50%);
+}
+
+/* A finger taps the document and what it places shows up under it. */
+.tap-hint {
+  position: fixed;
+  inset: 56px 0 150px;
+  z-index: 15;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  transition: opacity 220ms var(--ease-arrive);
+}
+
+.tap-hint[data-leaving] {
+  opacity: 0;
+}
+
+.tap-hint__spot {
+  position: relative;
+  width: 0;
+  height: 0;
+}
+
+.tap-hint__ghost,
+.tap-hint__ripple,
+.tap-hint__hand {
+  position: absolute;
+  animation-duration: 2600ms;
+  animation-timing-function: var(--ease-arrive);
+  animation-iteration-count: 2;
+  animation-fill-mode: both;
+}
+
+.tap-hint__ghost {
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+  animation-name: tap-ghost;
+}
+
+.tap-hint__ripple {
+  left: -22px;
+  top: -22px;
+  width: 44px;
+  height: 44px;
+  border: 2px solid var(--paper-accent);
+  border-radius: 50%;
+  animation-name: tap-ripple;
+}
+
+/* The fingertip of the glyph sits on the spot. */
+.tap-hint__hand {
+  left: -23px;
+  top: -4px;
+  width: 52px;
+  height: 52px;
+  color: var(--paper-ink);
+  filter: drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff) drop-shadow(0 6px 10px rgb(20 26 42 / 0.28));
+  transform-origin: 44% 7%;
+  animation-name: tap-hand;
+}
+
+@keyframes tap-hand {
+  0% {
+    opacity: 0;
+    transform: translate(26px, 42px);
+  }
+
+  20% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+
+  28% {
+    transform: translate(0, 0) scale(0.86);
+  }
+
+  38%,
+  52% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+
+  68%,
+  100% {
+    opacity: 0;
+    transform: translate(22px, 36px);
+  }
+}
+
+@keyframes tap-ripple {
+  0%,
+  27% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+
+  30% {
+    opacity: 0.6;
+    transform: scale(0.5);
+  }
+
+  62%,
+  100% {
+    opacity: 0;
+    transform: scale(1.6);
+  }
+}
+
+@keyframes tap-ghost {
+  0%,
+  29% {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+
+  40%,
+  80% {
+    opacity: 0.85;
+    transform: scale(1);
+  }
+
+  94%,
+  100% {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tap-hint__hand,
+  .tap-hint__ghost {
+    animation: none;
+  }
+
+  .tap-hint__ghost {
+    opacity: 0.85;
+  }
+
+  .tap-hint__ripple {
+    display: none;
+  }
 }
 
 /* Dock */

@@ -1,4 +1,4 @@
-import { ArrowArcLeft, ArrowArcRight, ArrowClockwise, ArrowsOutCardinal, Check, DownloadSimple, Minus, Plus, Trash, X } from '@phosphor-icons/react'
+import { ArrowArcLeft, ArrowArcRight, ArrowClockwise, ArrowsOutCardinal, Check, Copy, DownloadSimple, Minus, Plus, Trash, X } from '@phosphor-icons/react'
 import { INK_COLORS, type SignatureItem } from '../pdf/model'
 import { normalizeAngle, turnedSize, turnPoint } from '../pdf/turn'
 import { signatureFile, type SignatureFormat } from '../sign/signatureFile'
@@ -8,19 +8,9 @@ import { MARK_PATHS } from '../pdf/marks'
 import type { Item, PageInfo } from '../pdf/model'
 import { SignatureArt } from '../sign/SignatureArt'
 import { toast } from '../ui/toast'
-import { commitItems, patchItem, removeItem, undo, useDoc, useDocStore, type DocStore } from './doc'
+import { commitItems, patchItem, useDoc, useDocStore } from './doc'
 import { LINE_HEIGHT } from './place'
-
-const clamp = (n: number, min: number, max: number) => Math.min(Math.max(n, min), Math.max(min, max))
-const rotationOf = (item: Item) => item.rotation ?? 0
-
-// Keeps the turned item's outline on the page.
-function within(x: number, y: number, w: number, h: number, deg: number, page: PageInfo) {
-  const t = turnedSize(w, h, deg)
-  const ex = (t.w - w) / 2
-  const ey = (t.h - h) / 2
-  return { x: clamp(x, ex, page.width - w - ex), y: clamp(y, ey, page.height - h - ey) }
-}
+import { clamp, copySelection, deleteSelection, gesture, moveSelection, offsetItems, rotationOf, textBoxes, turnSelection, within } from './selection'
 
 // After a resize, the corner that was dragged from stays where it shows.
 function keepCorner(x: number, y: number, w: number, h: number, nw: number, nh: number, deg: number) {
@@ -51,14 +41,12 @@ function describe(item: Item): string {
   return item.text ? `Texto: ${item.text}` : 'Texto vacío'
 }
 
-export function deleteWithUndo(store: DocStore, id: string) {
-  removeItem(store, id)
-  toast('Elemento eliminado', { action: { label: 'Deshacer', run: () => undo(store) } })
-}
-
 export const ItemView = memo(function ItemView({ item, zoom, page, sheet, onEditText }: Props) {
   const store = useDocStore()
-  const selected = useDoc((s) => s.selected === item.id)
+  const selected = useDoc((s) => s.selected.includes(item.id))
+  // The last one picked carries the toolbar; handles only show when it is alone.
+  const primary = useDoc((s) => s.selected[s.selected.length - 1] === item.id)
+  const count = useDoc((s) => s.selected.length)
   const editing = useDoc((s) => s.editing === item.id)
   const ref = useRef<HTMLDivElement>(null)
   const [box, setBox] = useState({ w: 0, h: 0 })
@@ -67,22 +55,26 @@ export const ItemView = memo(function ItemView({ item, zoom, page, sheet, onEdit
   useLayoutEffect(() => {
     const el = ref.current
     if (!el) return
-    const measure = () => setBox({ w: el.offsetWidth / zoom, h: el.offsetHeight / zoom })
+    const measure = () => {
+      const next = { w: el.offsetWidth / zoom, h: el.offsetHeight / zoom }
+      if (item.type === 'text') textBoxes.set(item.id, next)
+      setBox(next)
+    }
     measure()
     const observer = new ResizeObserver(measure)
     observer.observe(el)
     return () => observer.disconnect()
-  }, [zoom])
+  }, [zoom, item.id, item.type])
 
   useEffect(() => {
     const el = ref.current
-    if (selected && !editing && el && !el.contains(document.activeElement)) el.focus({ preventScroll: true })
-  }, [selected, editing])
+    if (primary && !editing && el && !el.contains(document.activeElement)) el.focus({ preventScroll: true })
+  }, [primary, editing])
 
   // A new item is born selected; if it landed under the dock or the top bar,
   // bring it (and its toolbar) into view.
   useEffect(() => {
-    if (store.get().selected === item.id) ref.current?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+    if (store.get().selected.includes(item.id)) ref.current?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
   }, [store, item.id])
 
   const size = () => {
@@ -91,30 +83,49 @@ export const ItemView = memo(function ItemView({ item, zoom, page, sheet, onEdit
     return box
   }
 
+  // Shift, Ctrl or Cmd adds to the selection or takes the item out of it;
+  // dragging any selected item moves the whole selection.
   const startDrag = (e: ReactPointerEvent<HTMLElement>) => {
-    if (editing || (e.pointerType === 'mouse' && e.button !== 0)) return
+    if (editing || gesture.pinching || (e.pointerType === 'mouse' && e.button !== 0)) return
     e.stopPropagation()
-    const wasSelected = store.get().selected === item.id
-    store.set({ selected: item.id, editing: null })
+    const state = store.get()
+    const additive = e.shiftKey || e.ctrlKey || e.metaKey
+    const wasSelected = state.selected.includes(item.id)
+    if (additive && wasSelected) {
+      store.set({ selected: state.selected.filter((id) => id !== item.id), editing: null })
+      return
+    }
+    if (additive) store.set({ selected: [...state.selected, item.id], editing: null })
+    else if (!wasSelected) store.set({ selected: [item.id], editing: null })
+    else store.set({ editing: null })
     const el = e.currentTarget
     el.setPointerCapture(e.pointerId)
-    const start = { px: e.clientX, py: e.clientY, x: item.x, y: item.y }
+    const start = { px: e.clientX, py: e.clientY }
     const before = store.get().items
-    const { w, h } = size()
+    const group = before.filter((i) => store.get().selected.includes(i.id))
     let moved = false
 
     const onMove = (ev: PointerEvent) => {
+      if (gesture.pinching) {
+        // A second finger came down to zoom: put everything back and let go.
+        if (moved) store.set({ items: before })
+        moved = false
+        onUp()
+        return
+      }
       const dx = (ev.clientX - start.px) / zoom
       const dy = (ev.clientY - start.py) / zoom
       if (!moved && Math.hypot(dx, dy) * zoom < 4) return
       moved = true
-      patchItem(store, item.id, within(start.x + dx, start.y + dy, w, h, rotationOf(item), page))
+      offsetItems(store, group, dx, dy)
     }
     const onUp = () => {
       el.removeEventListener('pointermove', onMove)
       el.removeEventListener('pointerup', onUp)
       el.removeEventListener('pointercancel', onUp)
       if (moved) commitItems(store, store.get().items, before)
+      else if (additive || gesture.pinching) return
+      else if (wasSelected && group.length > 1) store.set({ selected: [item.id] })
       else if (wasSelected && item.type === 'text') edit()
     }
     el.addEventListener('pointermove', onMove)
@@ -195,47 +206,36 @@ export const ItemView = memo(function ItemView({ item, zoom, page, sheet, onEdit
     el.addEventListener('pointercancel', onUp)
   }
 
-  const turnBy = (delta: number) => {
-    const before = store.get().items
-    const current = before.find((i) => i.id === item.id) ?? item
-    const rotation = normalizeAngle(rotationOf(current) + delta)
-    const { w, h } = size()
-    patchItem(store, item.id, { rotation, ...within(current.x, current.y, w, h, rotation, page) })
-    commitItems(store, store.get().items, before)
-  }
-
   const edit = () => {
     if (item.type !== 'text') return
     if (sheet) onEditText(item)
-    else store.set({ selected: item.id, editing: item.id })
+    else store.set({ selected: [item.id], editing: item.id })
   }
 
+  // Keys act on the whole selection; shortcuts with Ctrl or Cmd belong to the editor.
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-    if (editing) return
+    if (editing || e.ctrlKey || e.metaKey || e.altKey) return
     const step = e.shiftKey ? 10 : 1
     const moves: Record<string, [number, number]> = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }
+    const onItem = e.target === e.currentTarget
     if (moves[e.key]) {
       e.preventDefault()
-      const [dx, dy] = moves[e.key]
-      const { w, h } = size()
-      const before = store.get().items
-      patchItem(store, item.id, within(item.x + dx, item.y + dy, w, h, rotationOf(item), page))
-      commitItems(store, store.get().items, before)
-    } else if (e.key.toLowerCase() === 'r' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      moveSelection(store, ...moves[e.key])
+    } else if (e.key.toLowerCase() === 'r') {
       e.preventDefault()
-      turnBy(e.shiftKey ? -90 : 90)
+      turnSelection(store, e.shiftKey ? -90 : 90)
     } else if (e.key === '[' || e.key === ']') {
       e.preventDefault()
-      turnBy(e.key === ']' ? 5 : -5)
+      turnSelection(store, e.key === ']' ? 5 : -5)
     } else if (e.key === 'Delete' || e.key === 'Backspace') {
       e.preventDefault()
-      deleteWithUndo(store, item.id)
-    } else if (e.key === 'Enter' && item.type === 'text') {
+      deleteSelection(store)
+    } else if (e.key === 'Enter' && onItem && item.type === 'text' && count === 1) {
       e.preventDefault()
       edit()
     } else if (e.key === 'Escape') {
       e.preventDefault()
-      store.set({ selected: null })
+      store.set({ selected: [] })
       ref.current?.blur()
     }
   }
@@ -269,7 +269,8 @@ export const ItemView = memo(function ItemView({ item, zoom, page, sheet, onEdit
       onDoubleClick={edit}
       onKeyDown={onKeyDown}
       onFocus={(e) => {
-        if (e.target === e.currentTarget && store.get().selected !== item.id) store.set({ selected: item.id })
+        // Tabbing in selects it; a click already chose what to select.
+        if (e.target === e.currentTarget && e.currentTarget.matches(':focus-visible') && !store.get().selected.includes(item.id)) store.set({ selected: [item.id] })
       }}
     >
       <div className="item__body" style={rotation ? { transform: `rotate(${rotation}deg)` } : undefined}>
@@ -280,7 +281,7 @@ export const ItemView = memo(function ItemView({ item, zoom, page, sheet, onEdit
           </svg>
         ) : null}
         {item.type === 'text' ? <TextBody item={item} zoom={zoom} editing={editing} /> : null}
-        {selected && !editing ? (
+        {selected && count === 1 && !editing ? (
           <>
             <span className="item__handle" onPointerDown={startResize} aria-hidden />
             {!small ? (
@@ -292,7 +293,7 @@ export const ItemView = memo(function ItemView({ item, zoom, page, sheet, onEdit
         ) : null}
       </div>
 
-      {selected && !editing ? (
+      {selected && count === 1 && !editing ? (
         <>
           {small ? (
             // Too small to grab without covering it: a grip outside the item.
@@ -300,9 +301,9 @@ export const ItemView = memo(function ItemView({ item, zoom, page, sheet, onEdit
               <ArrowsOutCardinal size={14} weight="bold" />
             </span>
           ) : null}
-          <ItemToolbar item={item} flip={item.y * zoom - extY < 52} onTurn={turnBy} />
         </>
       ) : null}
+      {primary && !editing ? <ItemToolbar item={item} count={count} flip={item.y * zoom - extY < 52} /> : null}
     </div>
   )
 })
@@ -335,7 +336,7 @@ function TextBody({ item, zoom, editing }: { item: Extract<Item, { type: 'text' 
       store.set((s) => ({
         items: s.items.filter((i) => i.id !== item.id),
         undo: wasThere ? [...s.undo, snapshot] : s.undo.slice(0, -1),
-        selected: null,
+        selected: [],
       }))
       return
     }
@@ -373,8 +374,42 @@ function TextBody({ item, zoom, editing }: { item: Extract<Item, { type: 'text' 
   )
 }
 
-function ItemToolbar({ item, flip, onTurn }: { item: Item; flip: boolean; onTurn: (delta: number) => void }) {
+function ItemToolbar({ item, count, flip }: { item: Item; count: number; flip: boolean }) {
   const store = useDocStore()
+  const onTurn = (delta: number) => turnSelection(store, delta)
+  const copy = (
+    <button type="button" className="item-bar__btn" onClick={() => copySelection(store)} aria-label="Copiar" title="Copiar (Ctrl+C)">
+      <Copy size={16} weight="bold" aria-hidden />
+    </button>
+  )
+  const remove = (
+    <button type="button" className="item-bar__btn item-bar__btn--danger" onClick={() => deleteSelection(store)} aria-label="Eliminar" title="Eliminar (Supr)">
+      <Trash size={16} weight="bold" aria-hidden />
+    </button>
+  )
+  // Several picked: only what applies to all of them.
+  if (count > 1) {
+    return (
+      <div className="item-bar" data-flip={flip || undefined} role="toolbar" aria-label="Opciones de la selección" onPointerDown={(e) => e.stopPropagation()}>
+        <span className="item-bar__count" aria-live="polite">
+          {count} elementos
+        </span>
+        <span className="item-bar__sep" aria-hidden />
+        {copy}
+        <span className="item-bar__sep" aria-hidden />
+        <span className="item-bar__turn" role="group" aria-label="Girar">
+          <button type="button" className="item-bar__btn" data-turn="left" onClick={() => onTurn(-90)} aria-label="Girar a la izquierda" title="Girar a la izquierda (Mayús+R)">
+            <ArrowArcLeft size={16} weight="bold" aria-hidden />
+          </button>
+          <button type="button" className="item-bar__btn" onClick={() => onTurn(90)} aria-label="Girar a la derecha" title="Girar a la derecha (R)">
+            <ArrowArcRight size={16} weight="bold" aria-hidden />
+          </button>
+        </span>
+        <span className="item-bar__sep" aria-hidden />
+        {remove}
+      </div>
+    )
+  }
   const resize = (delta: number) => {
     if (item.type !== 'text') return
     const before = store.get().items
@@ -460,15 +495,10 @@ function ItemToolbar({ item, flip, onTurn }: { item: Item; flip: boolean; onTurn
         </button>
       </span>
       <span className="item-bar__sep" aria-hidden />
-      {item.type === 'signature' ? (
-        <>
-          <DownloadMenu item={item} />
-          <span className="item-bar__sep" aria-hidden />
-        </>
-      ) : null}
-      <button type="button" className="item-bar__btn item-bar__btn--danger" onClick={() => deleteWithUndo(store, item.id)} aria-label="Eliminar" title="Eliminar">
-        <Trash size={16} weight="bold" aria-hidden />
-      </button>
+      {copy}
+      {item.type === 'signature' ? <DownloadMenu item={item} /> : null}
+      <span className="item-bar__sep" aria-hidden />
+      {remove}
     </div>
   )
 }

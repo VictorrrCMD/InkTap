@@ -66,7 +66,7 @@ export function FieldSheet({ target, onDone, onNext }: Props) {
       const state = store.get()
       const item = state.items.find((i) => i.id === target.itemId)
       if (item?.type === 'text' && !item.text.trim()) {
-        store.set((s) => ({ items: s.items.filter((i) => i.id !== target.itemId), undo: s.undo.slice(0, -1), selected: null }))
+        store.set((s) => ({ items: s.items.filter((i) => i.id !== target.itemId), undo: s.undo.slice(0, -1), selected: [] }))
       } else if (before.current) commitItems(store, state.items, before.current)
     }
     onDone()

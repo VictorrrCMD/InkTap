@@ -19,13 +19,17 @@ export interface DocState {
   initial: Record<string, FieldValue>
   values: Record<string, FieldValue>
   items: Item[]
-  selected: string | null
+  // Selection order matters: the last one picked carries the toolbar.
+  selected: string[]
   editing: string | null
   tool: Tool | null
   zoom: number
   fitZoom: number
   undo: Item[][]
   redo: Item[][]
+  clipboard: Item[]
+  // Pastes onto each page since the last copy, so repeated pastes fan out.
+  pastes: Record<number, number>
   signDialog: { open: boolean; fieldId?: string }
   lastSignature: Signature | null
   currentPage: number
@@ -45,13 +49,15 @@ export function createDocStore(opened: OpenedPdf, name: string, bytes: Uint8Arra
     initial: opened.initial,
     values: { ...opened.initial },
     items: [],
-    selected: null,
+    selected: [],
     editing: null,
     tool: null,
     zoom: 1,
     fitZoom: 1,
     undo: [],
     redo: [],
+    clipboard: [],
+    pastes: {},
     signDialog: { open: false },
     lastSignature: null,
     currentPage: 0,
@@ -82,19 +88,28 @@ export function commitItems(store: DocStore, next: Item[], before = store.get().
   }))
 }
 
+export function addItems(store: DocStore, added: Item[]) {
+  commitItems(store, [...store.get().items, ...added])
+  store.set({ selected: added.map((i) => i.id), tool: null })
+}
+
 export function addItem(store: DocStore, item: Item) {
-  commitItems(store, [...store.get().items, item])
-  store.set({ selected: item.id, tool: null })
+  addItems(store, [item])
+}
+
+export function removeItems(store: DocStore, ids: string[]) {
+  const { items, selected, editing } = store.get()
+  const gone = new Set(ids)
+  if (!items.some((i) => gone.has(i.id))) return
+  commitItems(
+    store,
+    items.filter((i) => !gone.has(i.id)),
+  )
+  store.set({ selected: selected.filter((id) => !gone.has(id)), editing: editing && gone.has(editing) ? null : editing })
 }
 
 export function removeItem(store: DocStore, id: string) {
-  const { items, selected, editing } = store.get()
-  if (!items.some((i) => i.id === id)) return
-  commitItems(
-    store,
-    items.filter((i) => i.id !== id),
-  )
-  store.set({ selected: selected === id ? null : selected, editing: editing === id ? null : editing })
+  removeItems(store, [id])
 }
 
 // Live update while dragging or typing: no history entry until commitItems.
@@ -104,11 +119,20 @@ export function patchItem(store: DocStore, id: string, patch: Partial<Item>) {
   }))
 }
 
+export function patchItems(store: DocStore, patches: Map<string, Partial<Item>>) {
+  store.set((s) => ({
+    items: s.items.map((i) => (patches.has(i.id) ? ({ ...i, ...patches.get(i.id) } as Item) : i)),
+  }))
+}
+
+// Undo and redo keep whatever is still there selected.
+const stillThere = (selected: string[], items: Item[]) => selected.filter((id) => items.some((i) => i.id === id))
+
 export function undo(store: DocStore) {
   const { undo: stack, items } = store.get()
   const previous = stack[stack.length - 1]
   if (!previous) return false
-  store.set((s) => ({ items: previous, undo: s.undo.slice(0, -1), redo: [...s.redo, items], selected: null, editing: null }))
+  store.set((s) => ({ items: previous, undo: s.undo.slice(0, -1), redo: [...s.redo, items], selected: stillThere(s.selected, previous), editing: null }))
   return true
 }
 
@@ -116,7 +140,7 @@ export function redo(store: DocStore) {
   const { redo: stack, items } = store.get()
   const next = stack[stack.length - 1]
   if (!next) return false
-  store.set((s) => ({ items: next, redo: s.redo.slice(0, -1), undo: [...s.undo, items], selected: null, editing: null }))
+  store.set((s) => ({ items: next, redo: s.redo.slice(0, -1), undo: [...s.undo, items], selected: stillThere(s.selected, next), editing: null }))
   return true
 }
 
