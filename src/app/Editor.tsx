@@ -196,7 +196,7 @@ export function Editor({ store, onClose }: { store: DocStore; onClose: () => voi
           />
         ) : null}
         <p id="item-help" hidden>
-          Arrastra para moverlo. Con el teclado: flechas para mover, Supr para eliminar, Enter para editar el texto.
+          Arrastra para moverlo. Con el teclado: flechas para mover, R para girar 90 grados (Mayús+R al otro lado), corchetes para girar de 5 en 5, Supr para eliminar, Enter para editar el texto.
         </p>
         <SignDialog
           open={signDialog.open}

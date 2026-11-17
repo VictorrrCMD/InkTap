@@ -1,5 +1,8 @@
-import { ArrowsOutCardinal, Check, Minus, Plus, Trash, X } from '@phosphor-icons/react'
-import { INK_COLORS } from '../pdf/model'
+import { ArrowArcLeft, ArrowArcRight, ArrowClockwise, ArrowsOutCardinal, Check, DownloadSimple, Minus, Plus, Trash, X } from '@phosphor-icons/react'
+import { INK_COLORS, type SignatureItem } from '../pdf/model'
+import { normalizeAngle, turnedSize, turnPoint } from '../pdf/turn'
+import { signatureFile, type SignatureFormat } from '../sign/signatureFile'
+import { saveBlob } from './download'
 import { memo, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react'
 import { MARK_PATHS } from '../pdf/marks'
 import type { Item, PageInfo } from '../pdf/model'
@@ -9,6 +12,30 @@ import { commitItems, patchItem, removeItem, undo, useDoc, useDocStore, type Doc
 import { LINE_HEIGHT } from './place'
 
 const clamp = (n: number, min: number, max: number) => Math.min(Math.max(n, min), Math.max(min, max))
+const rotationOf = (item: Item) => item.rotation ?? 0
+
+// Keeps the turned item's outline on the page.
+function within(x: number, y: number, w: number, h: number, deg: number, page: PageInfo) {
+  const t = turnedSize(w, h, deg)
+  const ex = (t.w - w) / 2
+  const ey = (t.h - h) / 2
+  return { x: clamp(x, ex, page.width - w - ex), y: clamp(y, ey, page.height - h - ey) }
+}
+
+// After a resize, the corner that was dragged from stays where it shows.
+function keepCorner(x: number, y: number, w: number, h: number, nw: number, nh: number, deg: number) {
+  if (!deg) return { x, y }
+  const [px, py] = turnPoint(x, y, x + w / 2, y + h / 2, deg)
+  const [qx, qy] = turnPoint(0, 0, nw / 2, nh / 2, deg)
+  return { x: px - qx, y: py - qy }
+}
+
+// Near a right angle, land on it.
+function snapAngle(deg: number, fine: boolean) {
+  if (fine) return Math.round(deg / 15) * 15
+  const near = Math.round(deg / 90) * 90
+  return Math.abs(deg - near) < 4 ? near : deg
+}
 
 interface Props {
   item: Item
@@ -81,10 +108,7 @@ export const ItemView = memo(function ItemView({ item, zoom, page, sheet, onEdit
       const dy = (ev.clientY - start.py) / zoom
       if (!moved && Math.hypot(dx, dy) * zoom < 4) return
       moved = true
-      patchItem(store, item.id, {
-        x: clamp(start.x + dx, 0, page.width - w),
-        y: clamp(start.y + dy, 0, page.height - h),
-      })
+      patchItem(store, item.id, within(start.x + dx, start.y + dy, w, h, rotationOf(item), page))
     }
     const onUp = () => {
       el.removeEventListener('pointermove', onMove)
@@ -108,19 +132,25 @@ export const ItemView = memo(function ItemView({ item, zoom, page, sheet, onEdit
     const start = { px: e.clientX, py: e.clientY }
     const origin = { ...item } as Item
     const { w, h } = size()
+    const deg = rotationOf(origin)
+    const r = (deg * Math.PI) / 180
     const before = store.get().items
     const onMove = (ev: PointerEvent) => {
-      const dx = (ev.clientX - start.px) / zoom
-      const dy = (ev.clientY - start.py) / zoom
+      // The drag, measured along the item's own (turned) axes.
+      const mx = (ev.clientX - start.px) / zoom
+      const my = (ev.clientY - start.py) / zoom
+      const dx = mx * Math.cos(r) + my * Math.sin(r)
+      const dy = -mx * Math.sin(r) + my * Math.cos(r)
       const factor = 1 + (dx * w + dy * h) / (w * w + h * h)
       if (origin.type === 'signature') {
-        const maxW = Math.min(page.width - origin.x, (page.height - origin.y) * (origin.w / origin.h))
+        const maxW = deg ? page.width : Math.min(page.width - origin.x, (page.height - origin.y) * (origin.w / origin.h))
         const nw = clamp(origin.w * factor, 24, maxW)
-        patchItem(store, item.id, { w: nw, h: nw * (origin.h / origin.w) })
-      } else if (origin.type === 'text') {
-        patchItem(store, item.id, { size: clamp(Math.round(origin.size * factor * 2) / 2, 6, 48) })
+        const nh = nw * (origin.h / origin.w)
+        patchItem(store, item.id, { w: nw, h: nh, ...keepCorner(origin.x, origin.y, w, h, nw, nh, deg) })
       } else {
-        patchItem(store, item.id, { size: clamp(origin.size * factor, 6, 60) })
+        const size = origin.type === 'text' ? clamp(Math.round(origin.size * factor * 2) / 2, 6, 48) : clamp(origin.size * factor, 6, 60)
+        const k = size / origin.size
+        patchItem(store, item.id, { size, ...keepCorner(origin.x, origin.y, w, h, w * k, h * k, deg) })
       }
     }
     const onUp = () => {
@@ -132,6 +162,46 @@ export const ItemView = memo(function ItemView({ item, zoom, page, sheet, onEdit
     el.addEventListener('pointermove', onMove)
     el.addEventListener('pointerup', onUp)
     el.addEventListener('pointercancel', onUp)
+  }
+
+  // Drag the round handle around the item's center to turn it.
+  const startTurn = (e: ReactPointerEvent<HTMLSpanElement>) => {
+    e.stopPropagation()
+    e.preventDefault()
+    const el = e.currentTarget
+    el.setPointerCapture(e.pointerId)
+    const rect = ref.current?.getBoundingClientRect()
+    if (!rect) return
+    const cx = rect.left + rect.width / 2
+    const cy = rect.top + rect.height / 2
+    const from = Math.atan2(e.clientY - cy, e.clientX - cx)
+    const startDeg = rotationOf(item)
+    const { w, h } = size()
+    const before = store.get().items
+    const onMove = (ev: PointerEvent) => {
+      const turned = startDeg + ((Math.atan2(ev.clientY - cy, ev.clientX - cx) - from) * 180) / Math.PI
+      const rotation = normalizeAngle(snapAngle(turned, ev.shiftKey))
+      const current = store.get().items.find((i) => i.id === item.id) ?? item
+      patchItem(store, item.id, { rotation, ...within(current.x, current.y, w, h, rotation, page) })
+    }
+    const onUp = () => {
+      el.removeEventListener('pointermove', onMove)
+      el.removeEventListener('pointerup', onUp)
+      el.removeEventListener('pointercancel', onUp)
+      commitItems(store, store.get().items, before)
+    }
+    el.addEventListener('pointermove', onMove)
+    el.addEventListener('pointerup', onUp)
+    el.addEventListener('pointercancel', onUp)
+  }
+
+  const turnBy = (delta: number) => {
+    const before = store.get().items
+    const current = before.find((i) => i.id === item.id) ?? item
+    const rotation = normalizeAngle(rotationOf(current) + delta)
+    const { w, h } = size()
+    patchItem(store, item.id, { rotation, ...within(current.x, current.y, w, h, rotation, page) })
+    commitItems(store, store.get().items, before)
   }
 
   const edit = () => {
@@ -149,8 +219,14 @@ export const ItemView = memo(function ItemView({ item, zoom, page, sheet, onEdit
       const [dx, dy] = moves[e.key]
       const { w, h } = size()
       const before = store.get().items
-      patchItem(store, item.id, { x: clamp(item.x + dx, 0, page.width - w), y: clamp(item.y + dy, 0, page.height - h) })
+      patchItem(store, item.id, within(item.x + dx, item.y + dy, w, h, rotationOf(item), page))
       commitItems(store, store.get().items, before)
+    } else if (e.key.toLowerCase() === 'r' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      e.preventDefault()
+      turnBy(e.shiftKey ? -90 : 90)
+    } else if (e.key === '[' || e.key === ']') {
+      e.preventDefault()
+      turnBy(e.key === ']' ? 5 : -5)
     } else if (e.key === 'Delete' || e.key === 'Backspace') {
       e.preventDefault()
       deleteWithUndo(store, item.id)
@@ -166,8 +242,13 @@ export const ItemView = memo(function ItemView({ item, zoom, page, sheet, onEdit
 
   const shown = size()
   const small = Math.min(shown.w || 99, shown.h || 99) * zoom < 30
+  const rotation = rotationOf(item)
+  // How far the turned item reaches past its upright box, so the toolbar and grip clear it.
+  const reach = turnedSize(shown.w * zoom, shown.h * zoom, rotation)
+  const extX = (reach.w - shown.w * zoom) / 2
+  const extY = (reach.h - shown.h * zoom) / 2
 
-  const style: CSSProperties = { left: item.x * zoom, top: item.y * zoom }
+  const style = { left: item.x * zoom, top: item.y * zoom, '--ext-x': `${extX}px`, '--ext-y': `${extY}px` } as CSSProperties
   if (item.type === 'signature') Object.assign(style, { width: item.w * zoom, height: item.h * zoom })
   if (item.type === 'mark') Object.assign(style, { width: item.size * zoom, height: item.size * zoom })
 
@@ -191,24 +272,35 @@ export const ItemView = memo(function ItemView({ item, zoom, page, sheet, onEdit
         if (e.target === e.currentTarget && store.get().selected !== item.id) store.set({ selected: item.id })
       }}
     >
-      {item.type === 'signature' ? <SignatureArt signature={item.signature} className="item__sig" /> : null}
-      {item.type === 'mark' ? (
-        <svg viewBox="0 0 256 256" className="item__mark" aria-hidden>
-          <path d={MARK_PATHS[item.mark]} fill={item.color} />
-        </svg>
-      ) : null}
-      {item.type === 'text' ? <TextBody item={item} zoom={zoom} editing={editing} /> : null}
+      <div className="item__body" style={rotation ? { transform: `rotate(${rotation}deg)` } : undefined}>
+        {item.type === 'signature' ? <SignatureArt signature={item.signature} className="item__sig" /> : null}
+        {item.type === 'mark' ? (
+          <svg viewBox="0 0 256 256" className="item__mark" aria-hidden>
+            <path d={MARK_PATHS[item.mark]} fill={item.color} />
+          </svg>
+        ) : null}
+        {item.type === 'text' ? <TextBody item={item} zoom={zoom} editing={editing} /> : null}
+        {selected && !editing ? (
+          <>
+            <span className="item__handle" onPointerDown={startResize} aria-hidden />
+            {!small ? (
+              <span className="item__turn" onPointerDown={startTurn} title="Arrastra para girar" aria-hidden>
+                <ArrowClockwise size={10} weight="bold" />
+              </span>
+            ) : null}
+          </>
+        ) : null}
+      </div>
 
       {selected && !editing ? (
         <>
-          <span className="item__handle" onPointerDown={startResize} aria-hidden />
           {small ? (
             // Too small to grab without covering it: a grip outside the item.
             <span className="item__grip" onPointerDown={startDrag} title="Arrastra para mover" aria-hidden>
               <ArrowsOutCardinal size={14} weight="bold" />
             </span>
           ) : null}
-          <ItemToolbar item={item} flip={item.y * zoom < 52} />
+          <ItemToolbar item={item} flip={item.y * zoom - extY < 52} onTurn={turnBy} />
         </>
       ) : null}
     </div>
@@ -281,7 +373,7 @@ function TextBody({ item, zoom, editing }: { item: Extract<Item, { type: 'text' 
   )
 }
 
-function ItemToolbar({ item, flip }: { item: Item; flip: boolean }) {
+function ItemToolbar({ item, flip, onTurn }: { item: Item; flip: boolean; onTurn: (delta: number) => void }) {
   const store = useDocStore()
   const resize = (delta: number) => {
     if (item.type !== 'text') return
@@ -354,6 +446,26 @@ function ItemToolbar({ item, flip }: { item: Item; flip: boolean }) {
           <span className="item-bar__sep" aria-hidden />
         </>
       ) : null}
+      <span className="item-bar__turn" role="group" aria-label="Girar">
+        <button type="button" className="item-bar__btn" data-turn="left" onClick={() => onTurn(-90)} aria-label="Girar a la izquierda" title="Girar a la izquierda (Mayús+R)">
+          <ArrowArcLeft size={16} weight="bold" aria-hidden />
+        </button>
+        {rotationOf(item) ? (
+          <span className="item-bar__value item-bar__value--angle" aria-live="polite">
+            {rotationOf(item)}°
+          </span>
+        ) : null}
+        <button type="button" className="item-bar__btn" onClick={() => onTurn(90)} aria-label="Girar a la derecha" title="Girar a la derecha (R)">
+          <ArrowArcRight size={16} weight="bold" aria-hidden />
+        </button>
+      </span>
+      <span className="item-bar__sep" aria-hidden />
+      {item.type === 'signature' ? (
+        <>
+          <DownloadMenu item={item} />
+          <span className="item-bar__sep" aria-hidden />
+        </>
+      ) : null}
       <button type="button" className="item-bar__btn item-bar__btn--danger" onClick={() => deleteWithUndo(store, item.id)} aria-label="Eliminar" title="Eliminar">
         <Trash size={16} weight="bold" aria-hidden />
       </button>
@@ -397,6 +509,84 @@ function ColorChoice({ value, onChange }: { value: string; onChange: (color: str
         <span className="item-bar__swatch item-bar__swatch--custom" style={{ background: isPreset ? undefined : value }} aria-hidden />
       </button>
       <input ref={custom} type="color" className="ink-picker__native" value={value} onChange={(e) => onChange(e.target.value)} tabIndex={-1} aria-hidden />
+    </span>
+  )
+}
+
+// The signature as it shows on the page, to keep or use elsewhere.
+function DownloadMenu({ item }: { item: SignatureItem }) {
+  const [open, setOpen] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const button = useRef<HTMLButtonElement>(null)
+  const menu = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    menu.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus()
+    const outside = (e: PointerEvent) => {
+      const target = e.target as Node
+      if (!menu.current?.contains(target) && !button.current?.contains(target)) setOpen(false)
+    }
+    document.addEventListener('pointerdown', outside, true)
+    return () => document.removeEventListener('pointerdown', outside, true)
+  }, [open])
+
+  const save = async (format: SignatureFormat) => {
+    setOpen(false)
+    setBusy(true)
+    try {
+      saveBlob(await signatureFile(item.signature, rotationOf(item), format), `firma.${format}`)
+      toast(`Firma descargada en ${format.toUpperCase()}`, { tone: 'success' })
+    } catch {
+      toast('No se pudo descargar la firma. Intenta de nuevo.', { tone: 'error' })
+    } finally {
+      setBusy(false)
+      button.current?.focus()
+    }
+  }
+
+  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    // The item moves with arrows and deselects with Escape; inside the menu they mean something else.
+    e.stopPropagation()
+    const items = [...(menu.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? [])]
+    const at = items.indexOf(document.activeElement as HTMLElement)
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault()
+      items[(at + (e.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length]?.focus()
+    } else if (e.key === 'Escape' || e.key === 'Tab') {
+      if (e.key === 'Escape') e.preventDefault()
+      setOpen(false)
+      button.current?.focus()
+    }
+  }
+
+  return (
+    <span className="item-bar__download">
+      <button
+        ref={button}
+        type="button"
+        className="item-bar__btn"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label="Descargar firma"
+        title="Descargar firma"
+        disabled={busy}
+        onClick={() => setOpen((o) => !o)}
+      >
+        {busy ? <span className="spinner" aria-hidden /> : <DownloadSimple size={16} weight="bold" aria-hidden />}
+      </button>
+      {open ? (
+        <div ref={menu} className="item-menu" role="menu" aria-label="Descargar firma" onKeyDown={onKeyDown}>
+          <button type="button" role="menuitem" className="item-menu__item" onClick={() => save('svg')}>
+            <span>SVG</span>
+            <span className="item-menu__hint">Vectorial, nítida a cualquier tamaño</span>
+          </button>
+          <button type="button" role="menuitem" className="item-menu__item" onClick={() => save('png')}>
+            <span>PNG</span>
+            <span className="item-menu__hint">Imagen con fondo transparente</span>
+          </button>
+        </div>
+      ) : null}
     </span>
   )
 }

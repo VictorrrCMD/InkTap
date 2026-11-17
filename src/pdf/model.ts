@@ -66,6 +66,8 @@ interface ItemBase {
   page: number
   x: number
   y: number
+  // Degrees clockwise as shown, around the item's center.
+  rotation?: number
 }
 
 export interface SignatureItem extends ItemBase {

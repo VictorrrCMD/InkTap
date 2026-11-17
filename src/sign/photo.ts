@@ -195,6 +195,22 @@ export async function traceInk(ink: PhotoInk, color: string): Promise<Signature>
   return { id: uid('sig_'), kind: 'ink', w: ink.width, h: ink.height, paths, color, source: 'photo' }
 }
 
+// A typed signature is a picture of text: tracing its opaque pixels makes it vector.
+export async function traceImageSignature(src: string, color: string): Promise<Signature> {
+  const bitmap = await createImageBitmap(dataUrlToBlob(src))
+  const canvas = document.createElement('canvas')
+  canvas.width = bitmap.width
+  canvas.height = bitmap.height
+  const ctx = canvas.getContext('2d', { willReadFrequently: true })
+  if (!ctx) throw new Error('no-canvas')
+  ctx.drawImage(bitmap, 0, 0)
+  bitmap.close()
+  const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height)
+  const mask = new Uint8Array(canvas.width * canvas.height)
+  for (let i = 0; i < mask.length; i++) mask[i] = data[i * 4 + 3] > 127 ? 1 : 0
+  return traceInk({ mask, width: canvas.width, height: canvas.height, inkColor: 'black' }, color)
+}
+
 // Potrace writes tenths of a pixel with y pointing up; rewrite as absolute
 // pixel coordinates with y pointing down.
 export function fromPotrace(d: string, height: number): string {

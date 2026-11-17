@@ -1,5 +1,6 @@
 import type { Field, FieldValue, Item, PageInfo } from './model'
 import { MARK_BOX, MARK_PATHS } from './marks'
+import { turnPoint } from './turn'
 
 type Lib = typeof import('@cantoo/pdf-lib')
 type PDFDocument = Awaited<ReturnType<Lib['PDFDocument']['load']>>
@@ -53,18 +54,41 @@ async function build(lib: Lib, input: ExportInput, flatten: boolean): Promise<Ex
   const pages = doc.getPages()
   const images = new Map<string, Awaited<ReturnType<PDFDocument['embedPng']>>>()
 
+  const form = doc.getForm()
+  const signedFields = new Set(input.items.flatMap((i) => (i.type === 'signature' && i.fieldId ? [i.fieldId] : [])))
+  for (const field of input.fields) {
+    if (field.kind !== 'signature') continue
+    // A signature drawn into a signature field replaces the field: left in
+    // place, its widget would paint over the ink. Flattening drops the rest.
+    if (signedFields.has(field.id) || flatten) removeField(form, field.name)
+  }
+
+  if (flatten) form.flatten({ updateFieldAppearances: true })
+
+  // Drawn after flattening, so field backgrounds never cover what was placed on top of them.
   for (const item of input.items) {
     const page = pages[item.page]
     const info = input.pages[item.page]
     if (!page || !info) continue
     const vp = info.viewport
-    const rotate = degrees(info.rotation)
+    // Every anchor turns with the item around its center; the page's own
+    // rotation and the item's turn add up (PDF angles go the other way).
+    const turn = item.rotation ?? 0
+    const rotate = degrees(info.rotation - turn)
+    const lines = item.type === 'text' ? item.text.split('\n') : []
+    const box =
+      item.type === 'signature'
+        ? { w: item.w, h: item.h }
+        : item.type === 'mark'
+          ? { w: item.size, h: item.size }
+          : { w: Math.max(0, ...lines.map((l) => font.widthOfTextAtSize(toWinAnsi(l), item.size))), h: lines.length * item.size * input.lineHeight }
+    const at = (px: number, py: number) => vp.convertToPdfPoint(...turnPoint(px, py, item.x + box.w / 2, item.y + box.h / 2, turn))
 
     if (item.type === 'signature') {
       const sig = item.signature
       const color = hexToRgb(lib, sig.color)
       if (sig.kind === 'ink' && sig.paths) {
-        const [x, y] = vp.convertToPdfPoint(item.x, item.y)
+        const [x, y] = at(item.x, item.y)
         const scale = item.w / sig.w
         for (const d of sig.paths) page.drawSvgPath(d, { x, y, scale, color, rotate, borderWidth: 0 })
       } else if (sig.kind === 'image' && sig.src) {
@@ -73,20 +97,20 @@ async function build(lib: Lib, input: ExportInput, flatten: boolean): Promise<Ex
           image = await doc.embedPng(dataUrlBytes(sig.src))
           images.set(sig.id, image)
         }
-        const [x, y] = vp.convertToPdfPoint(item.x, item.y + item.h)
+        const [x, y] = at(item.x, item.y + item.h)
         page.drawImage(image, { x, y, width: item.w, height: item.h, rotate })
       }
     } else if (item.type === 'text') {
       const color = hexToRgb(lib, item.color)
-      item.text.split('\n').forEach((line, i) => {
+      lines.forEach((line, i) => {
         const text = toWinAnsi(line)
         if (!text.trim()) return
         const top = item.y + item.size * (input.baseline + i * input.lineHeight)
-        const [x, y] = vp.convertToPdfPoint(item.x, top)
+        const [x, y] = at(item.x, top)
         page.drawText(text, { x, y, size: item.size, font, color, rotate })
       })
     } else if (item.type === 'mark') {
-      const [x, y] = vp.convertToPdfPoint(item.x, item.y)
+      const [x, y] = at(item.x, item.y)
       page.drawSvgPath(MARK_PATHS[item.mark], {
         x,
         y,
@@ -98,16 +122,6 @@ async function build(lib: Lib, input: ExportInput, flatten: boolean): Promise<Ex
     }
   }
 
-  const form = doc.getForm()
-  const signedFields = new Set(input.items.flatMap((i) => (i.type === 'signature' && i.fieldId ? [i.fieldId] : [])))
-  for (const field of input.fields) {
-    if (field.kind !== 'signature') continue
-    // A signature drawn into a signature field replaces the field: left in
-    // place, its widget would paint over the ink. Flattening drops the rest.
-    if (signedFields.has(field.id) || flatten) removeField(form, field.name)
-  }
-
-  if (flatten) form.flatten({ updateFieldAppearances: true })
   const bytes = await doc.save({ useObjectStreams: true })
   return { bytes, flattened: flatten, skipped }
 }

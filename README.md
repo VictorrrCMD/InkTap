@@ -8,6 +8,8 @@ Rellena formularios PDF y fírmalos en el navegador: con el mouse, escribiendo t
 - **Detecta los campos del formulario** (texto, casillas, opciones, listas y campos de firma) y los llena en su lugar. En PDF sin campos puedes poner **texto, fecha y palomita/equis** donde quieras.
 - **Firma de cuatro formas:** dibujando, escribiendo tu nombre en tres estilos de letra, con una foto o con el celular: escaneas el QR, giras el celular y firmas con el dedo en pantalla completa (o le tomas foto a tu firma), tocas Usar firma y llega a la computadora.
 - **Firma desde una foto:** elige una imagen, tómala con la cámara de la computadora o mándala desde el celular. La app quita el fondo (también sombras y manchas), recorta y convierte la firma en trazos vectoriales. Puedes ajustar la sensibilidad, hacerla más gruesa o más delgada y cambiarle el color.
+- **Girar lo que colocas:** firmas, textos, fechas y marcas giran 90 grados con los botones de su barra (o con R), a cualquier ángulo con el tirador redondo de la esquina, y de 5 en 5 con los corchetes. El giro se respeta en el PDF descargado.
+- **Descargar la firma** en SVG (vectorial) o PNG (fondo transparente) desde su barra, con su color y su giro. La firma escrita también sale vectorial en SVG.
 - **Color después de colocar:** firmas, textos y marcas se pueden poner en azul, negro o cualquier color desde su barra. Las marcas pequeñas muestran un punto de arrastre por fuera para moverlas sin taparlas.
 - **Descarga el PDF aplanado:** lo que llenaste y firmaste queda fijo en la hoja. En el celular, además, se puede compartir.
 - Deshacer (Ctrl+Z), mover con flechas, borrar con Supr, colocar con Enter, modo claro y oscuro, y uso completo con teclado.
@@ -78,6 +80,7 @@ node scripts/make-fixtures.mjs     # genera los PDF de prueba
 node tests/e2e.mjs                 # formulario, QR con celular, celular, PDF rotado/recortado/protegido/con contraseña
 node tests/keyboard.mjs            # recorrido solo con teclado y enlaces rotos del celular
 node tests/photo.mjs               # firma desde foto (este equipo y celular), color y punto de arrastre
+node tests/rotate.mjs              # girar elementos, descargar la firma en SVG y PNG, PDF con elementos girados
 node tests/verify-output.mjs <pdf> # renderiza un PDF exportado y extrae su texto
 ```
 

@@ -4,7 +4,10 @@ export function outputName(original: string, signed: boolean): string {
 }
 
 export function saveFile(bytes: Uint8Array, name: string) {
-  const blob = new Blob([bytes as Uint8Array<ArrayBuffer>], { type: 'application/pdf' })
+  saveBlob(new Blob([bytes as Uint8Array<ArrayBuffer>], { type: 'application/pdf' }), name)
+}
+
+export function saveBlob(blob: Blob, name: string) {
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url
