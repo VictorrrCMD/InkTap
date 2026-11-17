@@ -1,0 +1,347 @@
+@import "tailwindcss";
+
+/* "Papel y tinta azul": white paper on a cool gray desk, one ballpoint-blue
+   accent. Radii: controls 10px, inputs 8px, dialogs 16px, paper 3px. */
+
+@theme inline {
+  --font-sans: "Schibsted Grotesk Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-doc: Helvetica, Arial, "Liberation Sans", sans-serif;
+  --font-script-1: "Great Vibes", cursive;
+  --font-script-2: "Homemade Apple", cursive;
+  --font-script-3: "Caveat", cursive;
+
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-line: var(--line);
+  --color-control: var(--control);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-text: var(--accent-text);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-on-primary: var(--on-primary);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+
+  --ease-travel: cubic-bezier(0.45, 0, 0.1, 1);
+  --ease-arrive: cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+/* The paper is white in every theme, so whatever sits on it (field tint,
+   rings, the pad's line) keeps light-theme ink. */
+:root {
+  --doc-font: Helvetica, Arial, "Liberation Sans", sans-serif;
+  --paper-ink: #141a2a;
+  --paper-ink-3: #5a6478;
+  --paper-accent: #2148c2;
+  --paper-accent-text: #1b3ba0;
+  --paper-line: #c9d0db;
+  --paper-mark: #7d889c;
+  --paper-tint: rgb(33 72 194 / 0.08);
+  --paper-tint-hover: rgb(33 72 194 / 0.15);
+}
+
+:root {
+  color-scheme: light;
+  --canvas: #e8ecf1;
+  --surface: #fafbfc;
+  --surface-2: #f1f4f8;
+  --paper: #ffffff;
+  --ink: #141a2a;
+  --ink-2: #3d4659;
+  --ink-3: #5a6478;
+  --line: #d3d9e2;
+  --control: #7d889c;
+  --accent: #2148c2;
+  --accent-soft: #e3eafb;
+  --accent-text: #1b3ba0;
+  --primary: #2148c2;
+  --primary-hover: #1b3ba0;
+  --on-primary: #ffffff;
+  --success: #12714f;
+  --success-soft: #e2f3ec;
+  --danger: #b42318;
+  --danger-soft: #fdecea;
+  --on-danger: #ffffff;
+  --raised: #ffffff;
+  --toast-success: #4fd1a0;
+  --toast-danger: #ff8a80;
+  --toast-accent: #a9bdff;
+  --scrim: rgb(20 26 42 / 0.42);
+  --shadow-paper: 0 0 0 1px rgb(20 26 42 / 0.06), 0 1px 2px rgb(20 26 42 / 0.06), 0 8px 24px -12px rgb(20 26 42 / 0.18);
+  --shadow-float: 0 0 0 1px rgb(20 26 42 / 0.07), 0 10px 30px -10px rgb(20 26 42 / 0.28);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --canvas: #0e121b;
+  --surface: #161b26;
+  --surface-2: #1d2330;
+  --paper: #ffffff;
+  --ink: #e8ecf3;
+  --ink-2: #b3bccb;
+  --ink-3: #8e98aa;
+  --line: #283041;
+  --control: #5e6a80;
+  --accent: #8ea7ff;
+  --accent-soft: #1e2a4d;
+  --accent-text: #b9c8ff;
+  --primary: #3f63db;
+  --primary-hover: #3657c9;
+  --on-primary: #ffffff;
+  --success: #4fd1a0;
+  --success-soft: #133328;
+  --danger: #ff8a80;
+  --danger-soft: #3a1d1c;
+  --on-danger: #1a0605;
+  --raised: #283041;
+  --toast-success: #12714f;
+  --toast-danger: #b42318;
+  --toast-accent: #1b3ba0;
+  --scrim: rgb(4 6 12 / 0.6);
+  --shadow-paper: 0 0 0 1px rgb(0 0 0 / 0.5), 0 10px 30px -12px rgb(0 0 0 / 0.7);
+  --shadow-float: 0 0 0 1px rgb(255 255 255 / 0.06), 0 14px 34px -12px rgb(0 0 0 / 0.75);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --canvas: #0e121b;
+    --surface: #161b26;
+    --surface-2: #1d2330;
+    --paper: #ffffff;
+    --ink: #e8ecf3;
+    --ink-2: #b3bccb;
+    --ink-3: #8e98aa;
+    --line: #283041;
+    --control: #5e6a80;
+    --accent: #8ea7ff;
+    --accent-soft: #1e2a4d;
+    --accent-text: #b9c8ff;
+    --primary: #3f63db;
+    --primary-hover: #3657c9;
+    --on-primary: #ffffff;
+    --success: #4fd1a0;
+    --success-soft: #133328;
+    --danger: #ff8a80;
+    --danger-soft: #3a1d1c;
+    --on-danger: #1a0605;
+    --raised: #283041;
+    --toast-success: #12714f;
+    --toast-danger: #b42318;
+    --toast-accent: #1b3ba0;
+    --scrim: rgb(4 6 12 / 0.6);
+    --shadow-paper: 0 0 0 1px rgb(0 0 0 / 0.5), 0 10px 30px -12px rgb(0 0 0 / 0.7);
+    --shadow-float: 0 0 0 1px rgb(255 255 255 / 0.06), 0 14px 34px -12px rgb(0 0 0 / 0.75);
+  }
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    margin: 0;
+    background: var(--canvas);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: var(--accent-soft);
+    color: var(--ink);
+  }
+
+  button,
+  [role="button"] {
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+  }
+
+  dialog {
+    color: inherit;
+  }
+}
+
+@layer components {
+  .btn {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 40px;
+    padding: 0 16px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+    user-select: none;
+    transition:
+      background-color 150ms ease,
+      color 150ms ease,
+      box-shadow 150ms ease,
+      transform 120ms ease;
+  }
+
+  .btn:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+
+  .btn:disabled {
+    opacity: 0.45;
+  }
+
+  .btn-primary {
+    background: var(--primary);
+    color: var(--on-primary);
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background: var(--primary-hover);
+  }
+
+  .btn-quiet {
+    background: transparent;
+    color: var(--ink-2);
+  }
+
+  .btn-quiet:hover:not(:disabled) {
+    background: var(--surface-2);
+    color: var(--ink);
+  }
+
+  .btn-outline {
+    background: var(--surface);
+    color: var(--ink);
+    box-shadow: inset 0 0 0 1px var(--control);
+  }
+
+  .btn-outline:hover:not(:disabled) {
+    background: var(--surface-2);
+  }
+
+  .btn-lg {
+    height: 48px;
+    padding: 0 22px;
+    font-size: 15px;
+    border-radius: 12px;
+  }
+
+  .icon-btn {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    color: var(--ink-2);
+    transition: background-color 150ms ease, color 150ms ease;
+  }
+
+  .icon-btn:hover:not(:disabled) {
+    background: var(--surface-2);
+    color: var(--ink);
+  }
+
+  .icon-btn:disabled {
+    opacity: 0.4;
+  }
+
+  .text-input {
+    width: 100%;
+    height: 44px;
+    padding: 0 12px;
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--ink);
+    box-shadow: inset 0 0 0 1px var(--control);
+    font-size: 15px;
+    transition: box-shadow 150ms ease;
+  }
+
+  .text-input::placeholder {
+    color: var(--ink-3);
+  }
+
+  .text-input:focus-visible {
+    outline: none;
+    box-shadow: inset 0 0 0 2px var(--accent);
+  }
+
+  .kbd {
+    display: inline-flex;
+    align-items: center;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 5px;
+    background: var(--surface-2);
+    box-shadow: inset 0 0 0 1px var(--line);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink-2);
+  }
+
+  .spinner {
+    width: 16px;
+    height: 16px;
+    flex: none;
+    border-radius: 999px;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    animation: spin 0.8s linear infinite;
+  }
+}
+
+@media (pointer: coarse) {
+  .btn,
+  .icon-btn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .spinner {
+    animation: spin 1.6s linear infinite !important;
+  }
+}
