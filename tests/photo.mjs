@@ -1,6 +1,6 @@
 // Signature from a photo: from this device, from the phone, then recolor and
 // the grip on a small mark. Usage: node tests/photo.mjs
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { chromium } from 'playwright-core'
 
 const BASE = process.env.BASE_URL ?? 'http://127.0.0.1:5173'
@@ -22,7 +22,9 @@ watch(page, 'pc')
 await page.goto(BASE + '/')
 
 // A phone photo of a signature: blue ink, paper with a shadow, grain and specks.
-const jpeg = await page.evaluate(() => {
+// Made once, so test runs don't rewrite the committed fixture.
+const PHOTO = FIX + 'firma-foto.jpg'
+const jpeg = existsSync(PHOTO) ? null : await page.evaluate(() => {
   const c = document.createElement('canvas')
   c.width = 1600
   c.height = 1000
@@ -59,7 +61,7 @@ const jpeg = await page.evaluate(() => {
   x.stroke()
   return c.toDataURL('image/jpeg', 0.82)
 })
-writeFileSync(FIX + 'firma-foto.jpg', Buffer.from(jpeg.split(',')[1], 'base64'))
+if (jpeg) writeFileSync(PHOTO, Buffer.from(jpeg.split(',')[1], 'base64'))
 
 // 1) From this device, into the form's signature field.
 await page.locator('input[type=file]').setInputFiles(FIX + 'formulario.pdf')
