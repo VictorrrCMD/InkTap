@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { ThemeToggle } from '../app/TopBar'
+import { Credit } from '../ui/Credit'
 import { Logo } from '../ui/Logo'
 import { DOCS } from './docs'
 import { legalHref, LEGAL_LINKS, TOOL_NOTICE, UPDATED, type LegalSlug } from './owner'
@@ -48,6 +49,7 @@ export default function Legal() {
 
       <footer className="legal__foot">
         <a href="/">Volver a InkTap</a>
+        <Credit />
       </footer>
     </div>
   )

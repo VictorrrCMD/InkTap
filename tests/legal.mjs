@@ -14,6 +14,11 @@ const check = (ok, label) => {
   log.push(`${ok ? 'ok  ' : 'FAIL'} ${label}`)
   if (!ok) problems.push(label)
 }
+const credit = async (scope, where) => {
+  const link = scope.locator('.credit a')
+  const ok = (await scope.locator('.credit').innerText()).trim() === 'By Victor Reyes' && (await link.getAttribute('href')) === 'https://victor-reyes.dev' && (await link.getAttribute('target')) === '_blank'
+  check(ok && (await link.isVisible()), `${where}: credit links to victor-reyes.dev`)
+}
 
 const browser = await chromium.launch({ channel: 'chrome' })
 const page = await browser.newPage({ viewport: { width: 1280, height: 860 } })
@@ -35,6 +40,7 @@ for (const [slug, title] of pages) {
   const text = await page.locator('.legal__doc').innerText()
   check(!/[—–]/.test(text), `${slug}: no long dashes`)
   check(text.includes(TOOL) && !/Pendiente/i.test(text), `${slug}: tool notice, nothing pending`)
+  await credit(page.locator('.legal__foot'), slug)
   await page.screenshot({ path: `${OUT}legal-${slug}.png`, fullPage: true })
 }
 await page.goto(`${BASE}/legal`)
@@ -49,6 +55,7 @@ check(await page.getByText('Todo se queda en tu equipo').isVisible(), 'home show
 const footLinks = await page.locator('.home__foot .legal-links a').allTextContents()
 check(footLinks.join(',') === 'Términos,Privacidad,Cookies,Uso responsable', `home footer links: ${footLinks.join(', ')}`)
 check((await page.locator('.home__foot').innerText()).includes(TOOL), 'home footer carries the tool notice')
+await credit(page.locator('.home__foot'), 'home')
 await page.screenshot({ path: OUT + 'legal-home.png' })
 
 // Editor: the logo goes home, through the confirm when there is unsaved work.
@@ -79,6 +86,8 @@ await phone.screenshot({ path: OUT + 'legal-phone-editor.png', clip: { x: 0, y: 
 await phone.goto(BASE + '/s/AAAAAAAAAAAAAAAAAAAAAA#' + 'A'.repeat(43))
 await phone.locator('.phone-page__foot').waitFor()
 check((await phone.locator('.phone-page__foot').innerText()).includes(TOOL), 'phone page carries the tool notice')
+await credit(phone.locator('.phone-page__foot'), 'phone page')
+await phone.locator('.phone-page__foot').screenshot({ path: OUT + 'legal-phone-foot.png' })
 await phone.goto(BASE + '/legal/privacidad')
 await phone.locator('.legal__doc h1').waitFor()
 const overflow = await phone.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)

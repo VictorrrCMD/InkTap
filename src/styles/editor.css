@@ -226,6 +226,28 @@
   font-weight: 500;
 }
 
+.home__foot-end {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 18px;
+}
+
+.credit {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--ink-3);
+}
+
+.credit a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  color: var(--accent-text);
+  font-weight: 600;
+  text-underline-offset: 2px;
+}
+
 .legal-links {
   display: flex;
   flex-wrap: wrap;
@@ -2597,6 +2619,11 @@ dialog.sheet[open]::backdrop {
 }
 
 .legal__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 24px;
   padding: 18px max(16px, 4vw) 28px;
   border-top: 1px solid var(--line);
   font-size: 14px;

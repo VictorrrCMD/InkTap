@@ -9,6 +9,7 @@ import { cryptoAvailable, importKey, seal, unseal } from '../sign/sealed'
 import { SignaturePad, type PadHandle } from '../sign/SignaturePad'
 import type { PhoneMeta, PhonePayload } from '../sign/usePhoneSession'
 import { Logo } from '../ui/Logo'
+import { Credit } from '../ui/Credit'
 import { LegalLinks } from '../legal/LegalLinks'
 import { TOOL_NOTICE } from '../legal/owner'
 
@@ -416,6 +417,7 @@ export default function PhoneSign() {
       <footer className="phone-page__foot">
         <p>{TOOL_NOTICE}</p>
         <LegalLinks newTab className="phone-page__legal" />
+        <Credit />
       </footer>
     </div>
   )
