@@ -1,6 +1,7 @@
 import { ArrowLeft, DownloadSimple, Minus, Moon, Plus, Sun } from '@phosphor-icons/react'
 import { useTheme } from '../lib/theme'
 import { isDirty, useDoc, useDocStore, type DocStore } from './doc'
+import { Logo } from '../ui/Logo'
 
 const STEPS = [0.5, 0.67, 0.8, 1, 1.25, 1.5, 1.75, 2, 2.5, 3]
 export const MIN_ZOOM = STEPS[0]
@@ -33,8 +34,8 @@ export function TopBar({ onClose, onDownload, busy }: { onClose: () => void; onD
       <button type="button" className="icon-btn" onClick={onClose} aria-label="Cerrar documento" title="Cerrar documento">
         <ArrowLeft size={20} aria-hidden />
       </button>
-      <span className="topbar__brand" aria-hidden>
-        InkTap
+      <span className="topbar__brand">
+        <Logo label={null} />
       </span>
       <div className="topbar__doc">
         <span className="topbar__name" title={name}>

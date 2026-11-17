@@ -54,9 +54,11 @@ No hace falta configurar nada más: Netlify Blobs se activa solo para las funcio
 - **perfect-freehand** para el trazo de la firma; las firmas dibujadas se guardan como vectores, así que salen nítidas a cualquier zoom.
 - **esm-potrace-wasm** (potrace en WebAssembly) para vectorizar firmas en foto, después de separar la tinta del papel con una normalización de iluminación local (`src/sign/photo.ts`).
 - `netlify/functions/sessions.mts`: la sesión de firma por QR (crear, abrir desde el celular, recibir la firma cifrada, borrar). `sessions-cleanup.mts` limpia cada hora las sesiones abandonadas.
+- `brand/`: los logotipos originales de InkTap en SVG (horizontal, apilado, nombre, símbolo, monocromo, inverso para fondos oscuros e invertido sobre azul). `node scripts/brand.mjs` genera a partir de ellos el componente `src/ui/Logo.tsx`, `public/favicon.svg` y `public/apple-touch-icon.png`; si cambian los logotipos, reemplaza los archivos y vuelve a correrlo.
 - `src/demo/`: la animación de la página de inicio, hecha con el kit de stageshow (licencia MIT en `src/demo/kit/LICENSE`).
 
 ```
+brand/      logotipos originales de InkTap
 src/
   app/      editor, página de inicio, estado del documento
   pdf/      abrir, leer campos, exportar
@@ -86,4 +88,3 @@ Para probar la compilación con la CSP de producción: `npm run build`, luego `n
 - Los formularios XFA dinámicos (algunos de gobierno hechos con LiveCycle) no se pueden mostrar completos en navegadores; la app avisa y permite escribir encima con Texto.
 - El texto libre y los campos se escriben con Helvetica: los acentos del español funcionan; letras fuera de ese juego (por ejemplo, alfabetos no latinos) se reemplazan.
 - La firma es una firma visual (como firmar en papel), no una firma digital con certificado.
-- El ícono de la pestaña del navegador (`public/favicon.svg`) es provisional mientras llega el logotipo de InkTap.

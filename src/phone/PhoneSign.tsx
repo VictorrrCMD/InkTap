@@ -8,6 +8,7 @@ import { hasInk } from '../sign/ink'
 import { cryptoAvailable, importKey, seal, unseal } from '../sign/sealed'
 import { SignaturePad, type PadHandle } from '../sign/SignaturePad'
 import type { PhoneMeta, PhonePayload } from '../sign/usePhoneSession'
+import { Logo } from '../ui/Logo'
 
 type State =
   | { phase: 'checking' }
@@ -161,7 +162,7 @@ export default function PhoneSign() {
   return (
     <div className="phone-page">
       <header className="phone-page__bar">
-        <span className="wordmark">InkTap</span>
+        <Logo />
       </header>
 
       {state.phase === 'checking' ? (

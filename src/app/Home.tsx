@@ -2,6 +2,7 @@ import { FilePdf, LockSimple } from '@phosphor-icons/react'
 import { lazy, Suspense, useEffect, useId, useRef, useState, useSyncExternalStore } from 'react'
 import { useTheme } from '../lib/theme'
 import { ThemeToggle } from './TopBar'
+import { Logo } from '../ui/Logo'
 
 const SigningDemo = lazy(() => import('../demo/SigningDemo'))
 
@@ -73,7 +74,7 @@ export function Home({ error, loading, password, onFile, onPassword, onCancelPas
   return (
     <div className="home" data-dragging={dragging || undefined}>
       <header className="home__bar">
-        <span className="wordmark">InkTap</span>
+        <Logo />
         <ThemeToggle />
       </header>
 

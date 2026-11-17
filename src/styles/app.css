@@ -60,6 +60,8 @@
   --line: #d3d9e2;
   --control: #7d889c;
   --accent: #2148c2;
+  --logo-mark: #2848d8;
+  --logo-name: #10141e;
   --accent-soft: #e3eafb;
   --accent-text: #1b3ba0;
   --primary: #2148c2;
@@ -91,6 +93,8 @@
   --line: #283041;
   --control: #5e6a80;
   --accent: #8ea7ff;
+  --logo-mark: #ffffff;
+  --logo-name: #ffffff;
   --accent-soft: #1e2a4d;
   --accent-text: #b9c8ff;
   --primary: #3f63db;
@@ -123,6 +127,8 @@
     --line: #283041;
     --control: #5e6a80;
     --accent: #8ea7ff;
+    --logo-mark: #ffffff;
+    --logo-name: #ffffff;
     --accent-soft: #1e2a4d;
     --accent-text: #b9c8ff;
     --primary: #3f63db;

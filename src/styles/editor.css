@@ -4,11 +4,16 @@
   font-family: var(--doc-font);
 }
 
-.wordmark {
-  font-size: 20px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  color: var(--ink);
+.logo {
+  display: block;
+  flex: none;
+  width: auto;
+  height: 30px;
+  color: var(--logo-name);
+}
+
+.logo__mark {
+  color: var(--logo-mark);
 }
 
 .btn-danger {
@@ -52,6 +57,10 @@
   justify-content: space-between;
   height: 64px;
   padding: 0 max(16px, 4vw);
+}
+
+.home__bar .logo {
+  height: 34px;
 }
 
 .home__main {
@@ -271,6 +280,10 @@
     padding: 4px 16px 0;
   }
 
+  .home__bar .logo {
+    height: 30px;
+  }
+
   .home__bar {
     height: 56px;
     padding: 0 16px;
@@ -326,10 +339,10 @@
   padding-right: 14px;
   margin-right: 4px;
   border-right: 1px solid var(--line);
-  font-size: 15px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  line-height: 24px;
+}
+
+.topbar__brand .logo {
+  height: 24px;
 }
 
 .topbar__doc {
