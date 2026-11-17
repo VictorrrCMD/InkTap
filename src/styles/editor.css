@@ -975,7 +975,7 @@
 }
 
 .item-bar[data-flip] {
-  top: calc(100% + var(--ext-y, 0px));
+  top: calc(100% + var(--ext-y, 0px) + var(--grip-room, 0px));
   transform: translate(-50%, 12px);
 }
 
@@ -2515,12 +2515,13 @@ dialog.sheet[open]::backdrop {
   inset: -10px;
 }
 
+/* The drag grip sits under the item, clear of its turned outline and its corner handles. */
 .item__grip {
   position: absolute;
-  top: 50%;
-  right: calc(100% + 10px + var(--ext-x, 0px));
+  top: calc(100% + var(--ext-y, 0px) + 14px);
+  left: 50%;
   pointer-events: auto;
-  display: grid;
+  display: none;
   place-items: center;
   width: 24px;
   height: 24px;
@@ -2530,7 +2531,11 @@ dialog.sheet[open]::backdrop {
   box-shadow: inset 0 0 0 1.5px var(--paper-accent), 0 2px 6px rgb(20 26 42 / 0.2);
   cursor: grab;
   touch-action: none;
-  transform: translateY(-50%);
+  transform: translateX(-50%);
+}
+
+.item[data-small] > .item__grip {
+  display: grid;
 }
 
 .item__grip::before {
@@ -2541,10 +2546,38 @@ dialog.sheet[open]::backdrop {
 
 @media (pointer: coarse) {
   .item__grip {
+    top: calc(100% + var(--ext-y, 0px) + 18px);
+    display: grid;
     width: 32px;
     height: 32px;
-    right: calc(100% + 12px + var(--ext-x, 0px));
   }
+}
+
+/* A toolbar flipped below the item goes under the grip. */
+.item[data-grip][data-small] {
+  --grip-room: 44px;
+}
+
+@media (pointer: coarse) {
+  .item[data-grip] {
+    --grip-room: 56px;
+  }
+}
+
+/* While it moves: no handles, and a fainter outline, so the page under it shows. */
+.item__handle,
+.item__turn {
+  transition: opacity 120ms ease;
+}
+
+.item[data-dragging] .item__handle,
+.item[data-dragging] .item__turn {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.item[data-dragging] > .item__body {
+  outline-color: color-mix(in srgb, var(--paper-accent) 35%, transparent);
 }
 
 .phone-page__modes {

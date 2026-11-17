@@ -1,5 +1,5 @@
 // The phone editor: pinch to zoom the document, drag to move around it, the
-// finger that shows where to tap, tapping off a signature, copy and paste.
+// finger that shows where to tap, the drag grip, tapping off a signature, copy and paste.
 // Usage: node tests/touch.mjs
 import { mkdirSync } from 'node:fs'
 import { chromium } from 'playwright-core'
@@ -100,6 +100,37 @@ await page.locator('.item[data-type="signature"]').waitFor()
 await page.waitForTimeout(400)
 check((await page.locator('.tap-hint').count()) === 0, 'the finger leaves once the signature is placed')
 check((await page.locator('.item[data-selected]').count()) === 1, 'the new signature is selected')
+
+// On a phone the drag grip always shows, centered under the item.
+const body = await page.locator('.item[data-type="signature"] .item__body').boundingBox()
+const grip = page.locator('.item[data-type="signature"] .item__grip')
+check(await grip.isVisible(), 'the drag grip shows on a phone, even for a big signature')
+const g = await grip.boundingBox()
+check(g.y > body.y + body.height && Math.abs(g.x + g.width / 2 - (body.x + body.width / 2)) < 1, 'the grip sits centered under the signature')
+
+// While it drags: no turn or resize handles, and a fainter outline.
+const outline = () => page.locator('.item[data-type="signature"] .item__body').evaluate((el) => getComputedStyle(el).outlineColor)
+const solid = await outline()
+const gx = g.x + g.width / 2
+const gy = g.y + g.height / 2
+await touch('touchStart', [{ x: gx, y: gy }])
+for (let i = 1; i <= 6; i++) await touch('touchMove', [{ x: gx + i * 6, y: gy + i * 4 }])
+await page.waitForTimeout(200)
+const during = await page.locator('.item[data-type="signature"]').evaluate((el) => ({
+  dragging: el.hasAttribute('data-dragging'),
+  handle: getComputedStyle(el.querySelector('.item__handle')).opacity,
+  turn: getComputedStyle(el.querySelector('.item__turn')).opacity,
+}))
+const faint = await outline()
+check(during.dragging && during.handle === '0' && during.turn === '0', `handles hide while dragging (${JSON.stringify(during)})`)
+check(faint !== solid, `the outline fades while dragging (${solid} to ${faint})`)
+await page.screenshot({ path: OUT + 't-dragging.png' })
+await touch('touchEnd', [])
+await page.waitForTimeout(250)
+const settled = await page.locator('.item[data-type="signature"]').evaluate((el) => ({ dragging: el.hasAttribute('data-dragging'), handle: getComputedStyle(el.querySelector('.item__handle')).opacity }))
+check(!settled.dragging && settled.handle === '1', 'handles come back when the finger lifts')
+const moved = await page.locator('.item[data-type="signature"] .item__body').boundingBox()
+check(Math.round(moved.x - body.x) === 36 && Math.round(moved.y - body.y) === 24, `the grip drags the signature (${Math.round(moved.x - body.x)}, ${Math.round(moved.y - body.y)})`)
 
 // Tapping the page off the signature lets go of it (placing it may have scrolled the page).
 const sig = await page.locator('.item[data-type="signature"] .item__body').boundingBox()

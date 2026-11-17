@@ -46,6 +46,12 @@ await place('Marca', 0.5, 0.42)
 await place('Fecha', 0.3, 0.5)
 check((await items()) === 3, 'three items placed')
 check((await picked()) === 1, 'the last one placed is selected')
+// On a computer the grip shows only for items too small to grab, and goes under them.
+const tiny = await page.locator('.item[data-type="mark"]').first().evaluate((el) => el.hasAttribute('data-small'))
+await page.locator('.item[data-type="mark"] .item__body').first().click()
+const gripBox = await page.locator('.item[data-type="mark"] .item__grip').first().boundingBox()
+const markBox = await page.locator('.item[data-type="mark"] .item__body').first().boundingBox()
+check(tiny && gripBox && gripBox.y > markBox.y + markBox.height, 'a small mark shows its grip underneath')
 
 // Clicking the page itself, off the item, lets go of it.
 let p = await at(0.7, 0.62)

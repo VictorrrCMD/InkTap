@@ -48,6 +48,7 @@ export const ItemView = memo(function ItemView({ item, zoom, page, sheet, onEdit
   const primary = useDoc((s) => s.selected[s.selected.length - 1] === item.id)
   const count = useDoc((s) => s.selected.length)
   const editing = useDoc((s) => s.editing === item.id)
+  const dragging = useDoc((s) => s.dragging && s.selected.includes(item.id))
   const ref = useRef<HTMLDivElement>(null)
   const [box, setBox] = useState({ w: 0, h: 0 })
 
@@ -116,6 +117,7 @@ export const ItemView = memo(function ItemView({ item, zoom, page, sheet, onEdit
       const dx = (ev.clientX - start.px) / zoom
       const dy = (ev.clientY - start.py) / zoom
       if (!moved && Math.hypot(dx, dy) * zoom < 4) return
+      if (!moved) store.set({ dragging: true })
       moved = true
       offsetItems(store, group, dx, dy)
     }
@@ -123,6 +125,7 @@ export const ItemView = memo(function ItemView({ item, zoom, page, sheet, onEdit
       el.removeEventListener('pointermove', onMove)
       el.removeEventListener('pointerup', onUp)
       el.removeEventListener('pointercancel', onUp)
+      if (store.get().dragging) store.set({ dragging: false })
       if (moved) commitItems(store, store.get().items, before)
       else if (additive || gesture.pinching) return
       else if (wasSelected && group.length > 1) store.set({ selected: [item.id] })
@@ -260,6 +263,8 @@ export const ItemView = memo(function ItemView({ item, zoom, page, sheet, onEdit
       data-small={small || undefined}
       data-selected={selected || undefined}
       data-editing={editing || undefined}
+      data-dragging={dragging || undefined}
+      data-grip={(selected && count === 1 && !editing) || undefined}
       style={style}
       tabIndex={0}
       role="group"
@@ -294,14 +299,11 @@ export const ItemView = memo(function ItemView({ item, zoom, page, sheet, onEdit
       </div>
 
       {selected && count === 1 && !editing ? (
-        <>
-          {small ? (
-            // Too small to grab without covering it: a grip outside the item.
-            <span className="item__grip" onPointerDown={startDrag} title="Arrastra para mover" aria-hidden>
-              <ArrowsOutCardinal size={14} weight="bold" />
-            </span>
-          ) : null}
-        </>
+        // Below the item. CSS shows it on touch screens, and on small items
+        // everywhere, since those are hard to grab without covering them.
+        <span className="item__grip" onPointerDown={startDrag} title="Arrastra para mover" aria-hidden>
+          <ArrowsOutCardinal size={14} weight="bold" />
+        </span>
       ) : null}
       {primary && !editing ? <ItemToolbar item={item} count={count} flip={item.y * zoom - extY < 52} /> : null}
     </div>

@@ -22,6 +22,8 @@ export interface DocState {
   // Selection order matters: the last one picked carries the toolbar.
   selected: string[]
   editing: string | null
+  // True while the selection is being dragged across the page.
+  dragging: boolean
   tool: Tool | null
   zoom: number
   fitZoom: number
@@ -51,6 +53,7 @@ export function createDocStore(opened: OpenedPdf, name: string, bytes: Uint8Arra
     items: [],
     selected: [],
     editing: null,
+    dragging: false,
     tool: null,
     zoom: 1,
     fitZoom: 1,
