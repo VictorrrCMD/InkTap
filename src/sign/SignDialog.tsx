@@ -57,6 +57,8 @@ function SignBody({ titleId, docName, session, onClose, onPick }: Omit<Props, 'o
   const [phoneInk, setPhoneInk] = useState<Ink | null>(null)
   const [photo, setPhoto] = useState<{ blob: Blob; fromPhone: boolean } | null>(null)
   const [photoSignature, setPhotoSignature] = useState<Signature | null>(null)
+  // A photo can be of anyone's signature, so it needs the signer's word first.
+  const [photoConsent, setPhotoConsent] = useState(false)
   const onPhotoResult = useCallback((s: Signature | null) => setPhotoSignature(s), [])
 
   const tabs = [
@@ -71,7 +73,7 @@ function SignBody({ titleId, docName, session, onClose, onPick }: Omit<Props, 'o
     (tab === 'draw' && strokes > 0) ||
     (tab === 'type' && name.trim().length > 0) ||
     (tab === 'phone' && !!phoneInk) ||
-    (tab === 'photo' && !!photoSignature)
+    (tab === 'photo' && !!photoSignature && photoConsent)
 
   const finish = async () => {
     if (!ready || busy) return
@@ -149,7 +151,12 @@ function SignBody({ titleId, docName, session, onClose, onPick }: Omit<Props, 'o
             fromPhone={!!photo?.fromPhone}
             color={color}
             phoneAllowed={phoneAllowed}
-            onPhoto={(blob, fromPhone = false) => setPhoto(blob ? { blob, fromPhone } : null)}
+            onPhoto={(blob, fromPhone = false) => {
+              setPhoto(blob ? { blob, fromPhone } : null)
+              setPhotoConsent(false)
+            }}
+            consent={photoConsent}
+            onConsent={setPhotoConsent}
             onColor={setColor}
             onResult={onPhotoResult}
             onUsePhone={() => setTab('phone')}
@@ -166,6 +173,7 @@ function SignBody({ titleId, docName, session, onClose, onPick }: Omit<Props, 'o
             onInk={setPhoneInk}
             onPhoto={(blob) => {
               setPhoto({ blob, fromPhone: true })
+              setPhotoConsent(false)
               setTab('photo')
             }}
           />

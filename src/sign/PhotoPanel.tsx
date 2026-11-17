@@ -3,6 +3,7 @@ import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { INK_COLORS, type Signature } from '../pdf/model'
 import { extractInk, loadPhoto, NoSignatureFound, traceInk, type PhotoSource } from './photo'
 import { SignatureArt } from './SignatureArt'
+import { legalHref } from '../legal/owner'
 
 interface Props {
   photo: Blob | null
@@ -14,12 +15,14 @@ interface Props {
   onResult: (signature: Signature | null) => void
   onUsePhone: () => void
   inkPicker: ReactNode
+  consent: boolean
+  onConsent: (yes: boolean) => void
 }
 
 const touchOnly = () => !window.matchMedia('(any-pointer: fine)').matches
 const canUseCamera = () => typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia
 
-export function PhotoPanel({ photo, fromPhone, color, phoneAllowed, onPhoto, onColor, onResult, onUsePhone, inkPicker }: Props) {
+export function PhotoPanel({ photo, fromPhone, color, phoneAllowed, onPhoto, onColor, onResult, onUsePhone, inkPicker, consent, onConsent }: Props) {
   const pick = useRef<HTMLInputElement>(null)
   const shoot = useRef<HTMLInputElement>(null)
   const [camera, setCamera] = useState(false)
@@ -199,6 +202,16 @@ export function PhotoPanel({ photo, fromPhone, color, phoneAllowed, onPhoto, onC
           Cambiar foto
         </button>
       </div>
+
+      <label className="check photo-edit__consent">
+        <input type="checkbox" checked={consent} onChange={(e) => onConsent(e.target.checked)} />
+        <span>
+          Confirmo que es mi firma, o que su titular me autorizó a usarla.{' '}
+          <a href={legalHref('uso-responsable')} target="_blank" rel="noopener">
+            Uso responsable
+          </a>
+        </span>
+      </label>
     </div>
   )
 }

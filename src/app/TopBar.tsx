@@ -1,4 +1,4 @@
-import { ArrowLeft, DownloadSimple, Minus, Moon, Plus, Sun } from '@phosphor-icons/react'
+import { DownloadSimple, Minus, Moon, Plus, Sun } from '@phosphor-icons/react'
 import { useTheme } from '../lib/theme'
 import { isDirty, useDoc, useDocStore, type DocStore } from './doc'
 import { Logo } from '../ui/Logo'
@@ -31,12 +31,11 @@ export function TopBar({ onClose, onDownload, busy }: { onClose: () => void; onD
 
   return (
     <header className="topbar">
-      <button type="button" className="icon-btn" onClick={onClose} aria-label="Cerrar documento" title="Cerrar documento">
-        <ArrowLeft size={20} aria-hidden />
+      <button type="button" className="topbar__home" onClick={onClose} aria-label="Ir al inicio" title="Ir al inicio">
+        <Logo label={null} className="topbar__logo" />
+        <Logo label={null} variant="mark" className="topbar__logo-mark" />
       </button>
-      <span className="topbar__brand">
-        <Logo label={null} />
-      </span>
+      <span className="topbar__divider" aria-hidden />
       <div className="topbar__doc">
         <span className="topbar__name" title={name}>
           {name}

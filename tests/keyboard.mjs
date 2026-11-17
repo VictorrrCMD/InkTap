@@ -86,7 +86,7 @@ await page.waitForTimeout(300)
 check(await page.locator('.sign-dialog').isHidden(), 'Escape closes the signature dialog')
 
 // Closing with changes asks first.
-await page.getByRole('button', { name: 'Cerrar documento' }).click()
+await page.getByRole('button', { name: 'Ir al inicio' }).click()
 await page.locator('.confirm').waitFor()
 await page.screenshot({ path: OUT + 'kb-confirm.png' })
 await page.keyboard.press('Escape')

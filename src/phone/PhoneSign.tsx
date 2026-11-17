@@ -9,6 +9,7 @@ import { cryptoAvailable, importKey, seal, unseal } from '../sign/sealed'
 import { SignaturePad, type PadHandle } from '../sign/SignaturePad'
 import type { PhoneMeta, PhonePayload } from '../sign/usePhoneSession'
 import { Logo } from '../ui/Logo'
+import { LegalLinks } from '../legal/LegalLinks'
 
 type State =
   | { phase: 'checking' }
@@ -410,6 +411,8 @@ export default function PhoneSign() {
           <p>{state.text}</p>
         </main>
       ) : null}
+
+      <LegalLinks newTab className="phone-page__legal" />
     </div>
   )
 }

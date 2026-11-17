@@ -6,8 +6,8 @@ import { createRoot } from 'react-dom/client'
 
 // The phone only needs the signing pad, not pdf.js: each route loads its own
 // chunk.
-const isPhone = location.pathname.startsWith('/s/')
-const Root = lazy(() => (isPhone ? import('./phone/PhoneSign') : import('./app/App')))
+const path = location.pathname
+const Root = lazy(() => (path.startsWith('/s/') ? import('./phone/PhoneSign') : path.startsWith('/legal') ? import('./legal/Legal') : import('./app/App')))
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

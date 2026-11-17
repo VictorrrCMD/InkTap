@@ -40,7 +40,7 @@ createServer((req, res) => {
     return
   }
   let path = decodeURIComponent(url.pathname)
-  if (path.startsWith('/s/') || path === '/') path = '/index.html'
+  if (path.startsWith('/s/') || path.startsWith('/legal') || path === '/') path = '/index.html'
   const file = normalize(join(root, path))
   if (!file.startsWith(normalize(root)) || !existsSync(file) || !statSync(file).isFile()) {
     res.writeHead(404, headers)

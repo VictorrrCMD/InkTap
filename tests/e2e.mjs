@@ -223,7 +223,7 @@ async function scenarioOddPdfs(browser) {
     await page.mouse.click(box.x + box.width * 0.2, box.y + box.height * 0.3)
     await page.screenshot({ path: OUT + `odd-${name}.png` })
     results[name] = await download(page, `odd-${name}`)
-    await page.getByRole('button', { name: 'Cerrar documento' }).click()
+    await page.getByRole('button', { name: 'Ir al inicio' }).click()
     const discard = page.getByRole('button', { name: 'Cerrar sin descargar' })
     if (await discard.isVisible().catch(() => false)) await discard.click()
   }

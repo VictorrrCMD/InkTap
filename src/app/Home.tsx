@@ -3,6 +3,8 @@ import { lazy, Suspense, useEffect, useId, useRef, useState, useSyncExternalStor
 import { useTheme } from '../lib/theme'
 import { ThemeToggle } from './TopBar'
 import { Logo } from '../ui/Logo'
+import { LegalLinks } from '../legal/LegalLinks'
+import { legalHref } from '../legal/owner'
 
 const SigningDemo = lazy(() => import('../demo/SigningDemo'))
 
@@ -128,10 +130,16 @@ export function Home({ error, loading, password, onFile, onPassword, onCancelPas
             </p>
           ) : null}
 
-          <p className="home__privacy">
-            <LockSimple size={18} weight="fill" aria-hidden />
-            Tu PDF se abre en este navegador y no se sube a ningún servidor.
-          </p>
+          <div className="home__privacy">
+            <LockSimple size={20} weight="fill" aria-hidden />
+            <div>
+              <p className="home__privacy-title">Todo se queda en tu equipo</p>
+              <p className="home__privacy-text">
+                Tus PDF, tus firmas y lo que escribes se procesan en este navegador: no se suben a ningún servidor y InkTap no recopila tu información. Al firmar desde
+                el celular, la firma viaja cifrada de un equipo al otro y se borra en cuanto llega. <a href={legalHref('privacidad')}>Aviso de privacidad</a>
+              </p>
+            </div>
+          </div>
         </section>
 
         {/* One picture for screen readers, not the scene's inner labels read one by one. */}
@@ -141,6 +149,13 @@ export function Home({ error, loading, password, onFile, onPassword, onCancelPas
           </Suspense>
         </div>
       </main>
+
+      <footer className="home__foot">
+        <p>
+          Al usar InkTap aceptas los <a href={legalHref('terminos')}>Términos y condiciones</a> y el <a href={legalHref('privacidad')}>Aviso de privacidad</a>.
+        </p>
+        <LegalLinks />
+      </footer>
 
       {dragging ? (
         <div className="drop-overlay" aria-hidden>

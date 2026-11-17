@@ -21,6 +21,12 @@ Rellena formularios PDF y fírmalos en el navegador: con el mouse, escribiendo t
 - **Las fotos de firmas se procesan en tu navegador.** Desde el celular viajan cifradas igual que una firma dibujada.
 - Las firmas guardadas («Recordar en este navegador») viven solo en ese navegador.
 
+## Textos legales
+
+Las páginas `/legal/terminos`, `/legal/privacidad`, `/legal/cookies` y `/legal/uso-responsable` describen cómo funciona InkTap de verdad (qué se queda en el equipo, qué pasa por el servidor al firmar desde el celular, qué guarda el navegador). Están enlazadas desde el pie del inicio y desde la página del celular.
+
+Antes de publicar, completa en `src/legal/owner.ts` el nombre o razón social del responsable, su domicilio, un correo de contacto y la ciudad de los tribunales. Mientras falte alguno, las páginas lo muestran como pendiente en lugar de inventarlo. Conviene que un abogado revise los textos.
+
 ## Correrlo en tu computadora
 
 Requisitos: Node 22.13 o más nuevo.
@@ -81,6 +87,7 @@ node tests/e2e.mjs                 # formulario, QR con celular, celular, PDF ro
 node tests/keyboard.mjs            # recorrido solo con teclado y enlaces rotos del celular
 node tests/photo.mjs               # firma desde foto (este equipo y celular), color y punto de arrastre
 node tests/rotate.mjs              # girar elementos, descargar la firma en SVG y PNG, PDF con elementos girados
+node tests/legal.mjs               # páginas legales, enlaces y el logo como regreso al inicio
 node tests/verify-output.mjs <pdf> # renderiza un PDF exportado y extrae su texto
 ```
 
