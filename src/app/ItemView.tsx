@@ -1,4 +1,5 @@
-import { Check, Minus, Plus, Trash, X } from '@phosphor-icons/react'
+import { ArrowsOutCardinal, Check, Minus, Plus, Trash, X } from '@phosphor-icons/react'
+import { INK_COLORS } from '../pdf/model'
 import { memo, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react'
 import { MARK_PATHS } from '../pdf/marks'
 import type { Item, PageInfo } from '../pdf/model'
@@ -63,7 +64,7 @@ export const ItemView = memo(function ItemView({ item, zoom, page, sheet, onEdit
     return box
   }
 
-  const startDrag = (e: ReactPointerEvent<HTMLDivElement>) => {
+  const startDrag = (e: ReactPointerEvent<HTMLElement>) => {
     if (editing || (e.pointerType === 'mouse' && e.button !== 0)) return
     e.stopPropagation()
     const wasSelected = store.get().selected === item.id
@@ -163,6 +164,9 @@ export const ItemView = memo(function ItemView({ item, zoom, page, sheet, onEdit
     }
   }
 
+  const shown = size()
+  const small = Math.min(shown.w || 99, shown.h || 99) * zoom < 30
+
   const style: CSSProperties = { left: item.x * zoom, top: item.y * zoom }
   if (item.type === 'signature') Object.assign(style, { width: item.w * zoom, height: item.h * zoom })
   if (item.type === 'mark') Object.assign(style, { width: item.size * zoom, height: item.size * zoom })
@@ -172,6 +176,7 @@ export const ItemView = memo(function ItemView({ item, zoom, page, sheet, onEdit
       ref={ref}
       className="item"
       data-type={item.type}
+      data-small={small || undefined}
       data-selected={selected || undefined}
       data-editing={editing || undefined}
       style={style}
@@ -197,6 +202,12 @@ export const ItemView = memo(function ItemView({ item, zoom, page, sheet, onEdit
       {selected && !editing ? (
         <>
           <span className="item__handle" onPointerDown={startResize} aria-hidden />
+          {small ? (
+            // Too small to grab without covering it: a grip outside the item.
+            <span className="item__grip" onPointerDown={startDrag} title="Arrastra para mover" aria-hidden>
+              <ArrowsOutCardinal size={14} weight="bold" />
+            </span>
+          ) : null}
           <ItemToolbar item={item} flip={item.y * zoom < 52} />
         </>
       ) : null}
@@ -327,9 +338,65 @@ function ItemToolbar({ item, flip }: { item: Item; flip: boolean }) {
           <span className="item-bar__sep" aria-hidden />
         </>
       ) : null}
+      {item.type !== 'signature' || item.signature.kind === 'ink' ? (
+        <>
+          <ColorChoice
+            value={item.type === 'signature' ? item.signature.color : item.color}
+            onChange={(color) => {
+              const before = store.get().items
+              const current = before.find((i) => i.id === item.id)
+              if (!current) return
+              if (current.type === 'signature') patchItem(store, item.id, { signature: { ...current.signature, color } })
+              else patchItem(store, item.id, { color })
+              commitItems(store, store.get().items, before)
+            }}
+          />
+          <span className="item-bar__sep" aria-hidden />
+        </>
+      ) : null}
       <button type="button" className="item-bar__btn item-bar__btn--danger" onClick={() => deleteWithUndo(store, item.id)} aria-label="Eliminar" title="Eliminar">
         <Trash size={16} weight="bold" aria-hidden />
       </button>
     </div>
+  )
+}
+
+// Blue, black, or any color from the system picker.
+function ColorChoice({ value, onChange }: { value: string; onChange: (color: string) => void }) {
+  const custom = useRef<HTMLInputElement>(null)
+  const isPreset = value === INK_COLORS.blue || value === INK_COLORS.black
+  return (
+    <span className="item-bar__colors" role="group" aria-label="Color">
+      {(['blue', 'black'] as const).map((key) => (
+        <button
+          key={key}
+          type="button"
+          className="item-bar__btn"
+          aria-pressed={value === INK_COLORS[key]}
+          aria-label={key === 'blue' ? 'Tinta azul' : 'Tinta negra'}
+          title={key === 'blue' ? 'Azul' : 'Negra'}
+          onClick={() => onChange(INK_COLORS[key])}
+        >
+          <span className="item-bar__swatch" style={{ background: INK_COLORS[key] }} aria-hidden />
+        </button>
+      ))}
+      <button
+        type="button"
+        className="item-bar__btn"
+        aria-pressed={!isPreset}
+        aria-label="Otro color"
+        title="Otro color"
+        onClick={() => {
+          try {
+            custom.current?.showPicker()
+          } catch {
+            custom.current?.click()
+          }
+        }}
+      >
+        <span className="item-bar__swatch item-bar__swatch--custom" style={{ background: isPreset ? undefined : value }} aria-hidden />
+      </button>
+      <input ref={custom} type="color" className="ink-picker__native" value={value} onChange={(e) => onChange(e.target.value)} tabIndex={-1} aria-hidden />
+    </span>
   )
 }

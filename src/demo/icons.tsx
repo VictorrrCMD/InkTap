@@ -1,4 +1,4 @@
-// eSign's own icon set, Phosphor (MIT), bold weight on its 256 grid: the same
+// InkTap's own icon set, Phosphor (MIT), bold weight on its 256 grid: the same
 // glyphs the app's signature dialog and phone page draw.
 const PATHS = {
   pencil:

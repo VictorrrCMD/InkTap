@@ -310,7 +310,8 @@ export function Stage<S extends object>({
     const root = rootRef.current
     const el = root?.querySelector<HTMLElement>(`[data-target="${name}"]`)
     if (!root || !el) {
-      warn(`no element with data-target="${name}"`)
+      // A stage that already unmounted has nothing to warn about.
+      if (root) warn(`no element with data-target="${name}"`)
       return pos.current
     }
     const r = rectOf(root, el, scaleRef.current)

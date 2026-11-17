@@ -9,7 +9,8 @@ const ID = /^[A-Za-z0-9_-]{22}$/
 const IV = /^[A-Za-z0-9_-]{16}$/
 const B64URL = /^[A-Za-z0-9_-]+$/
 const MAX_META = 4_000
-const MAX_SIGNATURE = 400_000
+// A drawn signature is a few KB; a photo of one, shrunk on the phone, up to ~1.5MB sealed.
+const MAX_SIGNATURE = 2_500_000
 
 interface Sealed {
   iv: string

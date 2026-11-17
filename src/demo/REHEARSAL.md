@@ -1,6 +1,6 @@
 # Rehearsal: SigningDemo (home hero)
 
-Gold: `device-pair`. Kept its layout: the window inset top and left and running off the foot, a phone straddling the window's right edge over the paper's margin, present from frame one. Changed: an animated story instead of a still, eSign's own look (desk-gray body, white paper, ballpoint blue, Schibsted Grotesk, Phosphor glyphs), the eSign phone page instead of a lock screen, and a compact design for the phone column (the contract scrolled to its signature line, a larger phone under it).
+Gold: `device-pair`. Kept its layout: the window inset top and left and running off the foot, a phone straddling the window's right edge over the paper's margin, present from frame one. Changed: an animated story instead of a still, InkTap's own look (desk-gray body, white paper, ballpoint blue, Schibsted Grotesk, Phosphor glyphs), the InkTap phone page instead of a lock screen, and a compact design for the phone column (the contract scrolled to its signature line, a larger phone under it).
 
 Beats: rest 1.0s, a finger draws the signature on the phone (3.2s, the ink tip under the finger by arc length), taps Enviar firma (label rolls to Enviada), the ink leaves the pad and flies to the contract's line (0.95s) while the panel's status changes to Firma recibida, payoff holds 2.2s, the contract slides to its next page and the button is ready again; loop about 11.5s. Poster: the payoff (signature on the line, Firma recibida, Enviada).
 

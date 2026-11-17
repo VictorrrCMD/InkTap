@@ -73,7 +73,7 @@ export function Home({ error, loading, password, onFile, onPassword, onCancelPas
   return (
     <div className="home" data-dragging={dragging || undefined}>
       <header className="home__bar">
-        <span className="wordmark">eSign</span>
+        <span className="wordmark">InkTap</span>
         <ThemeToggle />
       </header>
 

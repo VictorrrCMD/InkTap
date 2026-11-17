@@ -210,7 +210,7 @@ export function Editor({ store, onClose }: { store: DocStore; onClose: () => voi
             <div id={confirmId} className="confirm__title">
               ¿Cerrar sin descargar?
             </div>
-            <p className="confirm__text">eSign no guarda copias de tus documentos. Si cierras ahora, se pierde lo que llenaste y firmaste.</p>
+            <p className="confirm__text">InkTap no guarda copias de tus documentos. Si cierras ahora, se pierde lo que llenaste y firmaste.</p>
             <div className="confirm__actions">
               <button type="button" className="btn btn-quiet" onClick={() => setConfirmClose(false)} autoFocus>
                 Seguir editando

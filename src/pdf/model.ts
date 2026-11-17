@@ -58,7 +58,7 @@ export interface Signature {
   paths?: string[]
   src?: string
   color: string
-  source: 'draw' | 'phone' | 'type'
+  source: 'draw' | 'phone' | 'type' | 'photo'
 }
 
 interface ItemBase {

@@ -1,4 +1,6 @@
-import { ArrowCounterClockwise, CheckCircle, LockSimple, WarningCircle } from '@phosphor-icons/react'
+import { ArrowCounterClockwise, Camera, CheckCircle, ImageSquare, LockSimple, PencilSimple, WarningCircle } from '@phosphor-icons/react'
+import { shrinkPhoto } from '../sign/photo'
+import { Segmented } from '../ui/Segmented'
 import { useEffect, useRef, useState } from 'react'
 import { INK_COLORS } from '../pdf/model'
 import { openSession, SessionError, sendSignature } from '../sign/api'
@@ -36,15 +38,76 @@ function problemFor(error: unknown): State {
   return { phase: 'problem', title: 'No pudimos abrir el enlace', text: 'Vuelve a escanear el código desde la computadora.' }
 }
 
+// The photo is shrunk here before it travels; the computer removes the
+// background and traces it, so it can be adjusted on the bigger screen.
+function PhotoPick({ photo, onPhoto, onError }: { photo: string | null; onPhoto: (p: string | null) => void; onError: (m: string) => void }) {
+  const shoot = useRef<HTMLInputElement>(null)
+  const pick = useRef<HTMLInputElement>(null)
+  const [busy, setBusy] = useState(false)
+  const take = async (file?: File) => {
+    if (!file) return
+    setBusy(true)
+    onError('')
+    try {
+      onPhoto(await shrinkPhoto(file))
+    } catch {
+      onError('No pudimos leer esa imagen. Prueba con otra foto.')
+    } finally {
+      setBusy(false)
+    }
+  }
+  const input = (ref: typeof shoot, capture: boolean) => (
+    <input
+      ref={ref}
+      type="file"
+      accept="image/*"
+      capture={capture ? 'environment' : undefined}
+      hidden
+      onChange={(e) => {
+        void take(e.target.files?.[0])
+        e.target.value = ''
+      }}
+    />
+  )
+  return (
+    <div className="phone-photo">
+      {input(shoot, true)}
+      {input(pick, false)}
+      {photo ? (
+        <>
+          <img src={photo} alt="Foto de tu firma" className="phone-photo__preview" />
+          <button type="button" className="btn btn-quiet" onClick={() => onPhoto(null)}>
+            Tomar otra
+          </button>
+        </>
+      ) : (
+        <>
+          <p className="phone-photo__lead">Firma en una hoja blanca y tómale una foto de cerca, con buena luz.</p>
+          <button type="button" className="btn btn-outline btn-lg" onClick={() => shoot.current?.click()} disabled={busy}>
+            {busy ? <span className="spinner" aria-hidden /> : <Camera size={20} aria-hidden />}
+            Tomar foto
+          </button>
+          <button type="button" className="btn btn-quiet" onClick={() => pick.current?.click()} disabled={busy}>
+            <ImageSquare size={20} aria-hidden />
+            Elegir de la galería
+          </button>
+        </>
+      )}
+    </div>
+  )
+}
+
 export default function PhoneSign() {
   const [state, setState] = useState<State>({ phase: 'checking' })
   const [strokes, setStrokes] = useState(0)
   const [sendError, setSendError] = useState('')
   const pad = useRef<PadHandle>(null)
   const link = useRef(parseLink())
+  const [mode, setMode] = useState<'draw' | 'photo'>('draw')
+  const [photo, setPhoto] = useState<string | null>(null)
 
   useEffect(() => {
-    document.title = 'Firmar con eSign'
+    document.title = 'Firmar con InkTap'
     const parsed = link.current
     if (!parsed) {
       setState({ phase: 'problem', title: 'Este enlace está incompleto', text: 'Vuelve a escanear el código QR que aparece en la computadora.' })
@@ -71,13 +134,20 @@ export default function PhoneSign() {
   }, [])
 
   const send = async () => {
-    if (state.phase !== 'ready' || !pad.current || !link.current) return
-    const ink = pad.current.ink()
-    if (!hasInk(ink)) return
+    if (state.phase !== 'ready' || !link.current) return
+    let payload: PhonePayload
+    if (mode === 'photo') {
+      if (!photo) return
+      payload = { v: 1, photo }
+    } else {
+      const ink = pad.current?.ink()
+      if (!hasInk(ink)) return
+      payload = { v: 1, ink }
+    }
     setSendError('')
     setState({ ...state, phase: 'sending' })
     try {
-      const sealed = await seal(state.key, link.current.id, 'signature', { v: 1, ink } satisfies PhonePayload)
+      const sealed = await seal(state.key, link.current.id, 'signature', payload)
       await sendSignature(link.current.id, sealed)
       setState({ phase: 'sent' })
     } catch (error) {
@@ -91,7 +161,7 @@ export default function PhoneSign() {
   return (
     <div className="phone-page">
       <header className="phone-page__bar">
-        <span className="wordmark">eSign</span>
+        <span className="wordmark">InkTap</span>
       </header>
 
       {state.phase === 'checking' ? (
@@ -109,24 +179,49 @@ export default function PhoneSign() {
               Para <strong>{state.name}</strong>
             </p>
           </div>
-          <SignaturePad ref={pad} color={INK_COLORS.blue} label="Área para firmar con el dedo" hint="Firma con el dedo sobre la línea" onChange={setStrokes} className="phone-page__pad" />
-          <p className="phone-page__tip">Gira el teléfono para tener más espacio.</p>
+          <Segmented
+            label="Cómo quieres firmar"
+            value={mode}
+            onChange={setMode}
+            className="phone-page__modes"
+            options={[
+              { value: 'draw', label: 'Dibujar', icon: <PencilSimple size={18} weight="bold" aria-hidden /> },
+              { value: 'photo', label: 'Foto', icon: <Camera size={18} weight="bold" aria-hidden /> },
+            ]}
+          />
+          {mode === 'draw' ? (
+            <>
+              <SignaturePad ref={pad} color={INK_COLORS.blue} label="Área para firmar con el dedo" hint="Firma con el dedo sobre la línea" onChange={setStrokes} className="phone-page__pad" />
+              <p className="phone-page__tip">Gira el teléfono para tener más espacio.</p>
+            </>
+          ) : (
+            <PhotoPick photo={photo} onPhoto={setPhoto} onError={setSendError} />
+          )}
           {sendError ? (
             <p className="phone-page__error" role="alert">
               {sendError}
             </p>
           ) : null}
           <div className="phone-page__actions">
-            <button type="button" className="btn btn-outline btn-lg" onClick={() => pad.current?.undo()} disabled={!strokes || state.phase === 'sending'}>
-              <ArrowCounterClockwise size={20} aria-hidden />
-              Deshacer
-            </button>
-            <button type="button" className="btn btn-outline btn-lg" onClick={() => pad.current?.clear()} disabled={!strokes || state.phase === 'sending'}>
-              Borrar
-            </button>
-            <button type="button" className="btn btn-primary btn-lg phone-page__send" onClick={send} disabled={!strokes || state.phase === 'sending'}>
+            {mode === 'draw' ? (
+              <>
+                <button type="button" className="btn btn-outline btn-lg" onClick={() => pad.current?.undo()} disabled={!strokes || state.phase === 'sending'}>
+                  <ArrowCounterClockwise size={20} aria-hidden />
+                  Deshacer
+                </button>
+                <button type="button" className="btn btn-outline btn-lg" onClick={() => pad.current?.clear()} disabled={!strokes || state.phase === 'sending'}>
+                  Borrar
+                </button>
+              </>
+            ) : null}
+            <button
+              type="button"
+              className="btn btn-primary btn-lg phone-page__send"
+              onClick={send}
+              disabled={(mode === 'draw' ? !strokes : !photo) || state.phase === 'sending'}
+            >
               {state.phase === 'sending' ? <span className="spinner" aria-hidden /> : null}
-              Enviar firma
+              {mode === 'draw' ? 'Enviar firma' : 'Enviar foto'}
             </button>
           </div>
           <p className="phone-page__privacy">

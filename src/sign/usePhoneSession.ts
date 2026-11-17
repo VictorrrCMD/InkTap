@@ -9,15 +9,17 @@ export interface PhoneMeta {
   name: string
 }
 
+// The phone sends either the strokes it drew or a photo of a signature on paper.
 export interface PhonePayload {
   v: 1
-  ink: Ink
+  ink?: Ink
+  photo?: string
 }
 
 export type PhoneState =
   | { phase: 'creating' }
   | { phase: 'waiting' | 'opened'; url: string; expiresAt: number }
-  | { phase: 'received'; ink: Ink }
+  | { phase: 'received'; payload: PhonePayload }
   | { phase: 'expired' }
   | { phase: 'error'; reason: 'network' | 'crypto' | 'server' }
 
@@ -54,7 +56,8 @@ export function usePhoneSession(active: boolean, docName: string) {
           const payload = await unseal<PhonePayload>(key, id, 'signature', view.signature)
           finished = true
           discardSession(id)
-          setState(hasInk(payload.ink) ? { phase: 'received', ink: payload.ink } : { phase: 'error', reason: 'server' })
+          const usable = hasInk(payload.ink) || (typeof payload.photo === 'string' && payload.photo.startsWith('data:image/'))
+          setState(usable ? { phase: 'received', payload } : { phase: 'error', reason: 'server' })
           return
         }
         const phase = view.status === 'opened' ? 'opened' : 'waiting'

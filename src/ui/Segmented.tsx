@@ -48,7 +48,7 @@ export function Segmented<T extends string>({ label, value, options, onChange, r
     if (next < 0) return
     e.preventDefault()
     onChange(options[next].value)
-    requestAnimationFrame(() => listRef.current?.querySelector<HTMLElement>('[data-active="true"]')?.focus())
+    listRef.current?.querySelectorAll<HTMLElement>('.segmented__option')[next]?.focus()
   }
 
   const isTabs = role === 'tabs'

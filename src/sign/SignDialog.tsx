@@ -1,19 +1,22 @@
 import '@fontsource/caveat/500.css'
 import '@fontsource/great-vibes/400.css'
 import '@fontsource/homemade-apple/400.css'
-import { ArrowClockwise, ArrowCounterClockwise, Copy, DeviceMobile, PencilSimple, TextAa, Trash, X } from '@phosphor-icons/react'
-import { useEffect, useId, useMemo, useRef, useState } from 'react'
-import { INK_COLORS, type InkColor, type Signature } from '../pdf/model'
+import { ArrowClockwise, ArrowCounterClockwise, Camera, Copy, DeviceMobile, PencilSimple, TextAa, Trash, X } from '@phosphor-icons/react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { uid } from '../lib/bytes'
+import { INK_COLORS, type Signature } from '../pdf/model'
 import { Dialog } from '../ui/Dialog'
 import { Segmented } from '../ui/Segmented'
 import { inkToSignature, SCRIPT_FONTS, typedSignature, type Ink, type ScriptFontId } from './ink'
+import { dataUrlToBlob } from './photo'
+import { PhotoPanel } from './PhotoPanel'
 import { QrCode } from './QrCode'
 import { forgetSignature, keepSignature, loadSaved } from './saved'
 import { SignatureArt } from './SignatureArt'
 import { SignaturePad, type PadHandle } from './SignaturePad'
 import { usePhoneSession, type PhoneState } from './usePhoneSession'
 
-type Tab = 'saved' | 'draw' | 'type' | 'phone'
+type Tab = 'saved' | 'draw' | 'type' | 'photo' | 'phone'
 
 interface Props {
   open: boolean
@@ -43,7 +46,7 @@ function SignBody({ titleId, docName, session, onClose, onPick }: Omit<Props, 'o
   }, [saved, session])
   const phoneAllowed = useMemo(canUsePhone, [])
   const [tab, setTab] = useState<Tab>(reuse.length ? 'saved' : 'draw')
-  const [color, setColor] = useState<InkColor>('blue')
+  const [color, setColor] = useState<string>(INK_COLORS.blue)
   const [remember, setRemember] = useState(false)
   const [busy, setBusy] = useState(false)
 
@@ -52,24 +55,32 @@ function SignBody({ titleId, docName, session, onClose, onPick }: Omit<Props, 'o
   const [name, setName] = useState('')
   const [font, setFont] = useState<ScriptFontId>('formal')
   const [phoneInk, setPhoneInk] = useState<Ink | null>(null)
+  const [photo, setPhoto] = useState<{ blob: Blob; fromPhone: boolean } | null>(null)
+  const [photoSignature, setPhotoSignature] = useState<Signature | null>(null)
+  const onPhotoResult = useCallback((s: Signature | null) => setPhotoSignature(s), [])
 
   const tabs = [
     ...(reuse.length ? [{ value: 'saved' as const, label: 'Guardadas' }] : []),
     { value: 'draw' as const, label: 'Dibujar', icon: <PencilSimple size={16} weight="bold" aria-hidden /> },
     { value: 'type' as const, label: 'Escribir', icon: <TextAa size={16} weight="bold" aria-hidden /> },
+    { value: 'photo' as const, label: 'Foto', icon: <Camera size={16} weight="bold" aria-hidden /> },
     ...(phoneAllowed ? [{ value: 'phone' as const, label: 'Con el celular', icon: <DeviceMobile size={16} weight="bold" aria-hidden /> }] : []),
   ]
 
-  const ready = (tab === 'draw' && strokes > 0) || (tab === 'type' && name.trim().length > 0) || (tab === 'phone' && !!phoneInk)
+  const ready =
+    (tab === 'draw' && strokes > 0) ||
+    (tab === 'type' && name.trim().length > 0) ||
+    (tab === 'phone' && !!phoneInk) ||
+    (tab === 'photo' && !!photoSignature)
 
   const finish = async () => {
     if (!ready || busy) return
     setBusy(true)
-    const ink = INK_COLORS[color]
     let signature: Signature | null = null
-    if (tab === 'draw' && pad.current) signature = inkToSignature(pad.current.ink(), ink, 'draw')
-    if (tab === 'type') signature = await typedSignature(name, font, ink)
-    if (tab === 'phone' && phoneInk) signature = inkToSignature(phoneInk, ink, 'phone')
+    if (tab === 'draw' && pad.current) signature = inkToSignature(pad.current.ink(), color, 'draw')
+    if (tab === 'type') signature = await typedSignature(name, font, color)
+    if (tab === 'phone' && phoneInk) signature = inkToSignature(phoneInk, color, 'phone')
+    if (tab === 'photo' && photoSignature) signature = { ...photoSignature, id: uid('sig_'), color }
     setBusy(false)
     if (!signature) return
     if (remember) keepSignature(signature)
@@ -114,7 +125,7 @@ function SignBody({ titleId, docName, session, onClose, onPick }: Omit<Props, 'o
 
         {tab === 'draw' ? (
           <div className="draw">
-            <SignaturePad ref={pad} color={INK_COLORS[color]} label="Área para dibujar tu firma" hint="Firma sobre la línea" onChange={setStrokes} className="draw__pad" />
+            <SignaturePad ref={pad} color={color} label="Área para dibujar tu firma" hint="Firma sobre la línea" onChange={setStrokes} className="draw__pad" />
             <div className="sign__row">
               <InkPicker color={color} onChange={setColor} />
               <div className="sign__row-end">
@@ -132,7 +143,33 @@ function SignBody({ titleId, docName, session, onClose, onPick }: Omit<Props, 'o
 
         {tab === 'type' ? <TypePanel name={name} onName={setName} font={font} onFont={setFont} color={color} onColor={setColor} /> : null}
 
-        {tab === 'phone' ? <PhonePanel docName={docName} color={color} onColor={setColor} ink={phoneInk} onInk={setPhoneInk} /> : null}
+        {tab === 'photo' ? (
+          <PhotoPanel
+            photo={photo?.blob ?? null}
+            fromPhone={!!photo?.fromPhone}
+            color={color}
+            phoneAllowed={phoneAllowed}
+            onPhoto={(blob, fromPhone = false) => setPhoto(blob ? { blob, fromPhone } : null)}
+            onColor={setColor}
+            onResult={onPhotoResult}
+            onUsePhone={() => setTab('phone')}
+            inkPicker={<InkPicker color={color} onChange={setColor} />}
+          />
+        ) : null}
+
+        {tab === 'phone' ? (
+          <PhonePanel
+            docName={docName}
+            color={color}
+            onColor={setColor}
+            ink={phoneInk}
+            onInk={setPhoneInk}
+            onPhoto={(blob) => {
+              setPhoto({ blob, fromPhone: true })
+              setTab('photo')
+            }}
+          />
+        ) : null}
       </div>
 
       {tab !== 'saved' ? (
@@ -156,7 +193,19 @@ function SignBody({ titleId, docName, session, onClose, onPick }: Omit<Props, 'o
   )
 }
 
-function InkPicker({ color, onChange }: { color: InkColor; onChange: (c: InkColor) => void }) {
+// Azul and Negra cover most papers; Otro opens the system color picker.
+export function InkPicker({ color, onChange }: { color: string; onChange: (c: string) => void }) {
+  const custom = useRef<HTMLInputElement>(null)
+  const preset = color === INK_COLORS.blue ? 'blue' : color === INK_COLORS.black ? 'black' : 'custom'
+  const openCustom = () => {
+    const input = custom.current
+    if (!input) return
+    try {
+      input.showPicker()
+    } catch {
+      input.click()
+    }
+  }
   return (
     <div className="ink-picker">
       <span className="ink-picker__label" aria-hidden>
@@ -165,13 +214,15 @@ function InkPicker({ color, onChange }: { color: InkColor; onChange: (c: InkColo
       <Segmented
         label="Color de tinta"
         size="sm"
-        value={color}
-        onChange={onChange}
+        value={preset}
+        onChange={(value) => (value === 'custom' ? openCustom() : onChange(INK_COLORS[value]))}
         options={[
           { value: 'blue', label: 'Azul', icon: <span className="ink-dot" style={{ background: INK_COLORS.blue }} aria-hidden /> },
           { value: 'black', label: 'Negra', icon: <span className="ink-dot" style={{ background: INK_COLORS.black }} aria-hidden /> },
+          { value: 'custom', label: 'Otro', icon: <span className="ink-dot ink-dot--custom" style={{ background: preset === 'custom' ? color : undefined }} aria-hidden /> },
         ]}
       />
+      <input ref={custom} type="color" className="ink-picker__native" value={color} onChange={(e) => onChange(e.target.value)} tabIndex={-1} aria-label="Elegir otro color de tinta" />
     </div>
   )
 }
@@ -210,8 +261,8 @@ function TypePanel({
   onName: (v: string) => void
   font: ScriptFontId
   onFont: (f: ScriptFontId) => void
-  color: InkColor
-  onColor: (c: InkColor) => void
+  color: string
+  onColor: (c: string) => void
 }) {
   const inputId = useId()
   const preview = name.trim() || 'Tu nombre'
@@ -221,7 +272,7 @@ function TypePanel({
         <label htmlFor={inputId} className="type__label">
           Tu nombre
         </label>
-        <input id={inputId} className="text-input" value={name} onChange={(e) => onName(e.target.value)} placeholder="Nombre y apellido" autoComplete="name" maxLength={60} autoFocus />
+        <input id={inputId} className="text-input" value={name} onChange={(e) => onName(e.target.value)} placeholder="Nombre y apellido" autoComplete="name" maxLength={60} />
       </div>
       <div className="type__styles" role="radiogroup" aria-label="Estilo de letra">
         {SCRIPT_FONTS.map((f) => (
@@ -234,7 +285,7 @@ function TypePanel({
             data-active={font === f.id}
             onClick={() => onFont(f.id)}
           >
-            <span className="type__sample" style={{ fontFamily: `"${f.family}", cursive`, color: INK_COLORS[color], fontSize: `${30 * f.scale}px` }} data-empty={!name.trim()}>
+            <span className="type__sample" style={{ fontFamily: `"${f.family}", cursive`, color, fontSize: `${30 * f.scale}px` }} data-empty={!name.trim()}>
               {preview}
             </span>
             <span className="type__style-name">{f.label}</span>
@@ -246,15 +297,34 @@ function TypePanel({
   )
 }
 
-function PhonePanel({ docName, color, onColor, ink, onInk }: { docName: string; color: InkColor; onColor: (c: InkColor) => void; ink: Ink | null; onInk: (ink: Ink | null) => void }) {
+function PhonePanel({
+  docName,
+  color,
+  onColor,
+  ink,
+  onInk,
+  onPhoto,
+}: {
+  docName: string
+  color: string
+  onColor: (c: string) => void
+  ink: Ink | null
+  onInk: (ink: Ink | null) => void
+  onPhoto: (photo: Blob) => void
+}) {
   const { state, restart } = usePhoneSession(!ink, docName)
+  const handled = useRef<PhoneState | null>(null)
 
+  // A drawn signature stays here; a photo goes to the Foto tab to be cleaned up.
   useEffect(() => {
-    if (state.phase === 'received') onInk(state.ink)
-  }, [state, onInk])
+    if (state.phase !== 'received' || handled.current === state) return
+    handled.current = state
+    if (state.payload.photo) onPhoto(dataUrlToBlob(state.payload.photo))
+    else if (state.payload.ink) onInk(state.payload.ink)
+  }, [state, onInk, onPhoto])
 
   if (ink) {
-    const preview = inkToSignature(ink, INK_COLORS[color], 'phone')
+    const preview = inkToSignature(ink, color, 'phone')
     return (
       <div className="phone-done">
         <div className="phone-done__paper">{preview ? <SignatureArt signature={preview} className="phone-done__art" /> : null}</div>
@@ -285,10 +355,10 @@ function PhonePanel({ docName, color, onColor, ink, onInk }: { docName: string; 
         {'url' in state ? <QrCode value={state.url} label="Código QR para firmar desde el celular" /> : <div className="qr qr--empty" aria-hidden />}
       </div>
       <div className="phone__side">
-        <div className="phone__heading">Firma con el dedo en tu celular</div>
+        <div className="phone__heading">Firma desde tu celular</div>
         <ol className="phone__steps">
           <li>Apunta la cámara de tu celular a este código.</li>
-          <li>Firma en la pantalla y toca Enviar firma.</li>
+          <li>Firma con el dedo, o toma una foto de tu firma en papel, y envíala.</li>
         </ol>
         <PhoneStatus state={state} onRestart={restart} />
         {'url' in state ? <ShareLink url={state.url} expiresAt={state.expiresAt} /> : null}
@@ -335,7 +405,7 @@ function PhoneStatus({ state, onRestart }: { state: PhoneState; onRestart: () =>
   if (state.phase === 'error') {
     const text =
       state.reason === 'crypto'
-        ? 'Este navegador no puede cifrar la firma en esta dirección. Abre eSign desde su dirección https.'
+        ? 'Este navegador no puede cifrar la firma en esta dirección. Abre InkTap desde su dirección https.'
         : state.reason === 'network'
           ? 'No hay conexión con el servidor. Revisa tu internet.'
           : 'No pudimos recibir la firma.'

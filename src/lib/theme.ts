@@ -3,7 +3,7 @@ import { createStore, useStore } from './store'
 
 export type Theme = 'light' | 'dark'
 
-const KEY = 'esign:theme'
+const KEY = 'inktap:theme'
 const media = () => window.matchMedia('(prefers-color-scheme: dark)')
 
 function stored(): Theme | null {

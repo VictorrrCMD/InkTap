@@ -1,4 +1,4 @@
-# eSign: dirección visual
+# InkTap: dirección visual
 
 Elegida por el dueño del proyecto: **papel y tinta azul**. Sobria y confiable: lienzo gris frío claro, hojas blancas al centro y un solo acento azul tinta, como un bolígrafo. Modo claro y oscuro.
 

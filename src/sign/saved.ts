@@ -1,7 +1,7 @@
 import type { Signature } from '../pdf/model'
 
 // Signatures the person chose to keep, in this browser only.
-const KEY = 'esign:signatures'
+const KEY = 'inktap:signatures'
 const LIMIT = 4
 
 function valid(value: unknown): value is Signature {

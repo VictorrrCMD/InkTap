@@ -34,7 +34,7 @@ export function TopBar({ onClose, onDownload, busy }: { onClose: () => void; onD
         <ArrowLeft size={20} aria-hidden />
       </button>
       <span className="topbar__brand" aria-hidden>
-        eSign
+        InkTap
       </span>
       <div className="topbar__doc">
         <span className="topbar__name" title={name}>

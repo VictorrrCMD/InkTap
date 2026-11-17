@@ -297,7 +297,7 @@ export function createAct<S>(signal: AbortSignal, env: ActEnv<S>): Act<S> {
       const root = rootRef.current
       const el = root?.querySelector<HTMLElement>(`[data-target="${name}"]`)
       if (!root || !el) {
-        warn(`no element with data-target="${name}"`)
+        if (root) warn(`no element with data-target="${name}"`)
         return EMPTY
       }
       return opts?.layout ? layoutRectOf(root, el) : rectOf(root, el, scaleRef.current)

@@ -22,7 +22,7 @@ function pdfjsAssets(): Plugin {
   const pkg = resolve(here, 'node_modules/pdfjs-dist')
   let outDir = resolve(here, 'dist')
   return {
-    name: 'esign:pdfjs-assets',
+    name: 'inktap:pdfjs-assets',
     configResolved(config) {
       outDir = resolve(config.root, config.build.outDir)
     },

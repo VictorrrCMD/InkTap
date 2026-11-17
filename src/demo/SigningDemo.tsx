@@ -107,7 +107,7 @@ function Page({ signed, arriving, live }: { signed: boolean; arriving: boolean; 
   )
 }
 
-// The phone's screen follows the stage's look: eSign's dark page keeps a white
+// The phone's screen follows the stage's look: InkTap's dark page keeps a white
 // pad, and the status bar turns light over it.
 function PhoneScene({ s, width }: { s: S; width: number }) {
   const { theme } = useLook()
@@ -139,7 +139,7 @@ function PhoneScene({ s, width }: { s: S; width: number }) {
   )
 }
 
-export default function EsignDemo({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
+export default function InkTapDemo({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
   return (
     <Stage<S>
       width={720}
@@ -154,7 +154,7 @@ export default function EsignDemo({ theme = 'light' }: { theme?: 'light' | 'dark
     >
       {(s, rect, layout) => (
         <>
-          <Window title="eSign" className="esd-window">
+          <Window title="InkTap" className="esd-window">
             <div className="esd-app">
               <aside className="esd-side">
                 {/* The three ways to sign, as the signature dialog lists them */}

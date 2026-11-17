@@ -1,4 +1,4 @@
-/* The home page is the ground: no plate. The window takes eSign's own look,
+/* The home page is the ground: no plate. The window takes InkTap's own look,
    desk-gray body, white paper, ballpoint blue. */
 .esd .ss-stage {
   --ss-font: "Schibsted Grotesk Variable", system-ui, sans-serif;
@@ -343,7 +343,7 @@
   stroke-linejoin: round;
 }
 
-/* Dark: eSign's dark editor; the paper and the pad stay white. */
+/* Dark: InkTap's dark editor; the paper and the pad stay white. */
 
 .esd .ss-stage[data-theme="dark"] {
   --ss-accent: #3f63db;
