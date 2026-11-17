@@ -131,6 +131,18 @@ export function Editor({ store, onClose }: { store: DocStore; onClose: () => voi
     return () => window.removeEventListener('keydown', onKey)
   }, [store, confirmClose])
 
+  // The document zooms itself, so the browser stays at 1x while the editor is
+  // open: Safari won't zoom into a small form field and leave the page stuck there.
+  useEffect(() => {
+    const meta = document.querySelector<HTMLMetaElement>('meta[name="viewport"]')
+    if (!meta) return
+    const original = meta.content
+    meta.content = `${original}, maximum-scale=1`
+    return () => {
+      meta.content = original
+    }
+  }, [])
+
   useEffect(() => {
     const onBeforeUnload = (e: BeforeUnloadEvent) => {
       if (isDirty(store.get())) e.preventDefault()

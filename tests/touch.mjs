@@ -149,6 +149,84 @@ await page.screenshot({ path: OUT + 't-pasted.png' })
 const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
 check(overflow <= 0, `no sideways overflow (${overflow}px)`)
 
+// The grip shows for every size: a tiny mark, a date, and the signature zoomed in.
+const gripShows = async (selector) => {
+  const g = await page.locator(`${selector} .item__grip`).boundingBox()
+  const b = await page.locator(`${selector} .item__body`).boundingBox()
+  return !!g && g.width >= 30 && g.y > b.y + b.height
+}
+for (const [tool, type, fy] of [['Marca', 'mark', 0.25], ['Fecha', 'text', 0.35]]) {
+  await page.getByRole('button', { name: tool, exact: true }).tap()
+  const sheetBox = await page.locator('.page').nth(1).boundingBox()
+  await page.touchscreen.tap(sheetBox.x + sheetBox.width * 0.3, Math.max(sheetBox.y, 70) + 80 + fy * 100)
+  await page.waitForTimeout(300)
+  if (await page.locator('.field-sheet').count()) await page.getByRole('button', { name: 'Listo' }).tap()
+  check(await gripShows(`.item[data-type="${type}"][data-selected]`), `grip shows under a selected ${type}`)
+}
+await pinch(200, 420, 40, 120)
+const big = page.locator('.item[data-type="signature"] .item__body').last()
+await big.scrollIntoViewIfNeeded()
+await big.tap()
+await page.waitForTimeout(200)
+check(await gripShows('.item[data-type="signature"][data-selected]'), 'grip shows under a signature zoomed in')
+await page.screenshot({ path: OUT + 't-grip-zoomed.png' })
+
+// A phone whose browser reports a mouse-like pointer still gets the grip.
+const fine = await browser.newContext({ viewport: { width: 390, height: 844 } })
+const plain = await fine.newPage()
+await plain.goto(BASE + '/')
+await plain.locator('input[type=file]').setInputFiles(FIX + 'contrato-plano.pdf')
+await plain.locator('.page canvas').first().waitFor()
+await plain.getByRole('button', { name: 'Firmar', exact: true }).click()
+const plainPad = await plain.locator('.sign-dialog .pad').boundingBox()
+await plain.mouse.move(plainPad.x + plainPad.width * 0.15, plainPad.y + plainPad.height * 0.6)
+await plain.mouse.down()
+for (let t = 0; t <= 1; t += 0.05) await plain.mouse.move(plainPad.x + plainPad.width * (0.15 + t * 0.7), plainPad.y + plainPad.height * (0.6 - Math.sin(t * Math.PI * 3) * 0.2))
+await plain.mouse.up()
+await plain.getByRole('button', { name: 'Usar firma' }).click()
+const plainSheet = await plain.locator('.page').first().boundingBox()
+await plain.mouse.click(plainSheet.x + plainSheet.width * 0.5, plainSheet.y + 260)
+await plain.locator('.item[data-type="signature"][data-selected]').waitFor()
+const plainSmall = await plain.locator('.item[data-type="signature"]').evaluate((el) => el.hasAttribute('data-small'))
+check(!plainSmall && (await plain.locator('.item[data-type="signature"] .item__grip').isVisible()), 'phone width without touch: the grip shows on a big signature')
+
+// Pages of mixed sizes: the widest fits the screen below 50%, and zooming
+// back out lands on that fit, with nothing hanging off the side.
+const mixedCtx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
+const mixed = await mixedCtx.newPage()
+await mixed.goto(BASE + '/')
+// The home page can still be pinched; the editor puts the browser back at 1x.
+const mixedCdp = await mixedCtx.newCDPSession(mixed)
+const mtouch = (type, touchPoints) => mixedCdp.send('Input.dispatchTouchEvent', { type, touchPoints })
+const mpinch = async (x, y, from, to) => {
+  await mtouch('touchStart', [{ x: x - from, y, id: 1 }, { x: x + from, y, id: 2 }])
+  for (let i = 1; i <= 12; i++) {
+    const d = from + ((to - from) * i) / 12
+    await mtouch('touchMove', [{ x: x - d, y, id: 1 }, { x: x + d, y, id: 2 }])
+  }
+  await mtouch('touchEnd', [])
+  await mixed.waitForTimeout(400)
+}
+await mixed.locator('.home__intro').waitFor()
+await mpinch(195, 400, 30, 110)
+check((await mixed.evaluate(() => visualViewport.scale)) > 1, 'the home page can still be pinched')
+await mixed.locator('input[type=file]').setInputFiles(FIX + 'tamanos-mixtos.pdf')
+await mixed.locator('.page canvas').first().waitFor()
+await mixed.waitForTimeout(500)
+check((await mixed.evaluate(() => visualViewport.scale)) === 1, 'opening the editor puts the browser back at 1x')
+const fitted = await mixed.locator('.topbar__pct').textContent()
+await mpinch(300, 400, 30, 130)
+await mpinch(200, 400, 150, 20)
+await mpinch(200, 400, 150, 20)
+const sideways = await mixed.evaluate(() => {
+  const v = document.querySelector('.viewport')
+  return v.scrollWidth - v.clientWidth
+})
+check((await mixed.locator('.topbar__pct').textContent()) === fitted && sideways === 0, `zooming out returns to the fit (${fitted}) with no sideways scroll (${sideways}px)`)
+await mixed.getByRole('button', { name: 'Ir al inicio' }).evaluate((el) => el.click())
+await mixed.locator('.home__intro').waitFor()
+check(!(await mixed.evaluate(() => document.querySelector('meta[name=viewport]').content)).includes('maximum-scale'), 'leaving the editor lets the browser zoom again')
+
 // With reduced motion the finger holds still.
 const calm = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, reducedMotion: 'reduce' })
 const quiet = await calm.newPage()

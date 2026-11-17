@@ -3,7 +3,7 @@ import type { Field, Item } from '../pdf/model'
 import { useDoc, useDocStore } from './doc'
 import { PageView } from './PageView'
 import { clamp, gesture } from './selection'
-import { MAX_ZOOM, MIN_ZOOM } from './TopBar'
+import { MAX_ZOOM, minZoom } from './TopBar'
 
 interface Props {
   sheet: boolean
@@ -130,7 +130,7 @@ export function Viewport({ sheet, onSheet, onSign, onEditText }: Props) {
 
     const update = (scale: number, at: { x: number; y: number }) => {
       if (!pinch) return
-      const z = clamp(pinch.z0 * scale, MIN_ZOOM, MAX_ZOOM)
+      const z = clamp(pinch.z0 * scale, minZoom(store.get().fitZoom), MAX_ZOOM)
       const s = z / pinch.z0
       pinch.scale = s
       pinch.at = at
@@ -150,7 +150,10 @@ export function Viewport({ sheet, onSheet, onSign, onEditText }: Props) {
         content.style.willChange = ''
         p.spacer.remove()
       }
-      const z = clamp(p.z0 * p.scale, MIN_ZOOM, MAX_ZOOM)
+      const { fitZoom } = store.get()
+      let z = clamp(p.z0 * p.scale, minZoom(fitZoom), MAX_ZOOM)
+      // Close to the width of the screen: land exactly on it, centered with no sideways scroll.
+      if (Math.abs(z - fitZoom) / fitZoom < 0.06) z = fitZoom
       if (Math.abs(z - p.z0) < 0.001) {
         clear()
         el.scrollLeft = p.from.x - p.at.x

@@ -2544,7 +2544,9 @@ dialog.sheet[open]::backdrop {
   inset: -10px;
 }
 
-@media (pointer: coarse) {
+/* Any touch screen or phone-width window: every selected item, big or small.
+   Some phones report a fine pointer, so the width and touch checks back it up. */
+@media (pointer: coarse), (any-pointer: coarse), (hover: none), (max-width: 640px) {
   .item__grip {
     top: calc(100% + var(--ext-y, 0px) + 18px);
     display: grid;
@@ -2558,7 +2560,7 @@ dialog.sheet[open]::backdrop {
   --grip-room: 44px;
 }
 
-@media (pointer: coarse) {
+@media (pointer: coarse), (any-pointer: coarse), (hover: none), (max-width: 640px) {
   .item[data-grip] {
     --grip-room: 56px;
   }

@@ -4,12 +4,16 @@ import { isDirty, useDoc, useDocStore, type DocStore } from './doc'
 import { Logo } from '../ui/Logo'
 
 const STEPS = [0.5, 0.67, 0.8, 1, 1.25, 1.5, 1.75, 2, 2.5, 3]
-export const MIN_ZOOM = STEPS[0]
 export const MAX_ZOOM = STEPS[STEPS.length - 1]
 
+// A wide page (landscape, tabloid) fits the screen below 50%; zooming out
+// always reaches that fit, or the page could never be seen whole again.
+export const minZoom = (fitZoom: number) => Math.min(STEPS[0], fitZoom)
+
 export function zoomStep(store: DocStore, direction: 1 | -1) {
-  const { zoom } = store.get()
-  const next = direction > 0 ? STEPS.find((s) => s > zoom + 0.001) : [...STEPS].reverse().find((s) => s < zoom - 0.001)
+  const { zoom, fitZoom } = store.get()
+  const steps = fitZoom < STEPS[0] ? [fitZoom, ...STEPS] : STEPS
+  const next = direction > 0 ? steps.find((s) => s > zoom + 0.001) : [...steps].reverse().find((s) => s < zoom - 0.001)
   if (next) store.set({ zoom: next })
 }
 
@@ -27,6 +31,7 @@ export function TopBar({ onClose, onDownload, busy }: { onClose: () => void; onD
   const store = useDocStore()
   const { name, pages } = store.get()
   const zoom = useDoc((s) => s.zoom)
+  const fitZoom = useDoc((s) => s.fitZoom)
   const dirty = useDoc(isDirty)
 
   return (
@@ -45,7 +50,7 @@ export function TopBar({ onClose, onDownload, busy }: { onClose: () => void; onD
 
       <div className="topbar__end">
         <div className="topbar__zoom" role="group" aria-label="Zoom">
-          <button type="button" className="icon-btn" onClick={() => zoomStep(store, -1)} disabled={zoom <= MIN_ZOOM + 0.001} aria-label="Alejar" title="Alejar">
+          <button type="button" className="icon-btn" onClick={() => zoomStep(store, -1)} disabled={zoom <= minZoom(fitZoom) + 0.001} aria-label="Alejar" title="Alejar">
             <Minus size={18} weight="bold" aria-hidden />
           </button>
           <button
