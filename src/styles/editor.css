@@ -1674,18 +1674,6 @@ dialog.sheet[open]::backdrop {
   font-weight: 600;
 }
 
-.phone-page__pad {
-  aspect-ratio: auto;
-  height: min(50dvh, 380px);
-  min-height: 210px;
-}
-
-.phone-page__tip {
-  margin: -4px 0 0;
-  font-size: 13px;
-  color: var(--ink-3);
-}
-
 .phone-page__error {
   margin: 0;
   padding: 10px 12px;
@@ -1695,14 +1683,8 @@ dialog.sheet[open]::backdrop {
   font-size: 14px;
 }
 
-.phone-page__actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
 .phone-page__send {
-  grid-column: 1 / -1;
+  width: 100%;
 }
 
 .phone-page__privacy {
@@ -1742,47 +1724,175 @@ dialog.sheet[open]::backdrop {
 }
 
 @media (orientation: landscape) and (max-height: 520px) {
+  .phone-page {
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+  }
+
   .phone-page__bar {
     display: none;
   }
 
   .phone-page__sign {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(176px, 220px);
-    grid-template-rows: auto minmax(0, 1fr) auto;
-    gap: 10px 16px;
-    padding-top: 10px;
-  }
-
-  .phone-page__head {
-    grid-column: 1 / -1;
-    display: flex;
-    align-items: baseline;
-    gap: 12px;
+    width: min(100%, 560px);
+    margin: 0 auto;
+    padding-top: 12px;
   }
 
   .phone-page__title {
-    font-size: 20px;
+    font-size: 22px;
+  }
+}
+
+/* Phone: turn prompt and the full-screen pad */
+
+.phone-turn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 24px 20px 20px;
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--line);
+  text-align: center;
+}
+
+.phone-turn__art {
+  display: grid;
+  place-items: center;
+  width: 80px;
+  height: 80px;
+  color: var(--accent);
+}
+
+/* Shows the turn three times, then rests. */
+.phone-turn__art svg {
+  animation: turn-phone 2.6s cubic-bezier(0.65, 0, 0.35, 1) 0.5s 3 both;
+}
+
+.phone-turn__art[data-landscape="true"] svg {
+  animation: none;
+  transform: rotate(-90deg);
+}
+
+@keyframes turn-phone {
+  0%,
+  18% {
+    transform: rotate(0deg);
   }
 
-  .phone-page__pad {
-    grid-row: 2 / 4;
-    height: calc(100dvh - 76px - env(safe-area-inset-bottom));
-    min-height: 0;
+  45%,
+  78% {
+    transform: rotate(-90deg);
   }
 
-  .phone-page__tip {
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .phone-turn__art svg {
+    animation: none;
+    transform: rotate(-90deg);
+  }
+}
+
+.phone-turn__title {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.phone-turn__text {
+  max-width: 30ch;
+  margin: 0 0 6px;
+  font-size: 15px;
+  color: var(--ink-2);
+}
+
+.phone-turn .btn {
+  width: 100%;
+}
+
+.phone-stage {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  background: var(--paper);
+  outline: none;
+  transition: opacity 180ms ease, visibility 0s linear 0s;
+}
+
+.phone-stage[data-open="false"] {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms ease, visibility 0s linear 180ms;
+}
+
+.phone-stage__bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 56px;
+  padding: max(6px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) 6px max(10px, env(safe-area-inset-left));
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+
+.phone-stage__doc {
+  flex: 1;
+  min-width: 0;
+  margin: 0 0 0 4px;
+  overflow: hidden;
+  font-size: 14px;
+  color: var(--ink-2);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.phone-stage__doc strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.phone-stage__undo {
+  margin-left: auto;
+}
+
+.phone-stage__error {
+  margin: 0;
+  padding: 8px max(16px, env(safe-area-inset-left));
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: 14px;
+}
+
+.phone-stage__pad {
+  flex: 1;
+  width: auto;
+  aspect-ratio: auto;
+  min-height: 0;
+  margin: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.phone-stage__pad .pad__line {
+  left: 6%;
+  right: 6%;
+}
+
+@media (max-width: 520px) {
+  .phone-stage__doc,
+  .phone-stage__undo span {
     display: none;
-  }
-
-  .phone-page__actions {
-    grid-template-columns: 1fr;
-    align-content: start;
-  }
-
-  .phone-page__send {
-    grid-column: auto;
-    order: -1;
   }
 }
 

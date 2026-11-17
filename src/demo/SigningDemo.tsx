@@ -128,7 +128,7 @@ function PhoneScene({ s, width }: { s: S; width: number }) {
           </div>
         </div>
         <Button variant="primary" size="large" className="esd-send" data-target="send">
-          <States value={s.sent ? 'sent' : 'send'} states={{ send: 'Enviar firma', sent: 'Enviada' }} />
+          <States value={s.sent ? 'sent' : 'send'} states={{ send: 'Usar firma', sent: 'Enviada' }} />
         </Button>
         <span className="esd-body__note">
           <Glyph name="lock" size={16} />

@@ -2,7 +2,7 @@
 
 Gold: `device-pair`. Kept its layout: the window inset top and left and running off the foot, a phone straddling the window's right edge over the paper's margin, present from frame one. Changed: an animated story instead of a still, InkTap's own look (desk-gray body, white paper, ballpoint blue, Schibsted Grotesk, Phosphor glyphs), the InkTap phone page instead of a lock screen, and a compact design for the phone column (the contract scrolled to its signature line, a larger phone under it).
 
-Beats: rest 1.0s, a finger draws the signature on the phone (3.2s, the ink tip under the finger by arc length), taps Enviar firma (label rolls to Enviada), the ink leaves the pad and flies to the contract's line (0.95s) while the panel's status changes to Firma recibida, payoff holds 2.2s, the contract slides to its next page and the button is ready again; loop about 11.5s. Poster: the payoff (signature on the line, Firma recibida, Enviada).
+Beats: rest 1.0s, a finger draws the signature on the phone (3.2s, the ink tip under the finger by arc length), taps Usar firma (label rolls to Enviada), the ink leaves the pad and flies to the contract's line (0.95s) while the panel's status changes to Firma recibida, payoff holds 2.2s, the contract slides to its next page and the button is ready again; loop about 11.5s. Poster: the payoff (signature on the line, Firma recibida, Enviada).
 
 Captured (playground, `?capture=esign-demo`): wide loop at 720, the 390 loop (compact), dark loop, `--states`, the flight beat at about 60ms, the reduced-motion poster. In the app: home at 1440 light and dark, 1024 and 390.
 
@@ -10,7 +10,7 @@ Gate: `rehearsal passed` on the wide loop, the 390 loop, the dark loop and `--st
 
 Film lines that remain, judged against frames:
 - `appears with no entrance` / `vanishes with no exit` on `div.ss-fly.esd-flyer` and `svg.esd-sig`: the Fly hand-off the kit prescribes. At take-off the pad's ink unmounts in the same set the flyer shows; on landing the paper's ink shows and the flyer unmounts in one set, same box. The 60ms sheet (`esd-fly.png`) shows no pop at either end.
-- `handoff shift` on `span.ss-roll__item` (0.3px): the kit Button rolling Enviar firma to Enviada inside the phone's scale transform; sub-pixel, not visible at 1x.
+- `handoff shift` on `span.ss-roll__item` (0.3px): the kit Button rolling Usar firma to Enviada inside the phone's scale transform; sub-pixel, not visible at 1x.
 - `manual: same-box content change` on `esd-sig` during `draw`: the ink drawing in place under the finger, watched in motion.
 
 Review (fresh eye, 13 items) → response:

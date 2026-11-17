@@ -1,7 +1,7 @@
-import { ArrowCounterClockwise, Camera, CheckCircle, ImageSquare, LockSimple, PencilSimple, WarningCircle } from '@phosphor-icons/react'
+import { ArrowCounterClockwise, Camera, CheckCircle, DeviceMobile, ImageSquare, LockSimple, PencilSimple, WarningCircle, X } from '@phosphor-icons/react'
+import { useEffect, useRef, useState, type Ref } from 'react'
 import { shrinkPhoto } from '../sign/photo'
 import { Segmented } from '../ui/Segmented'
-import { useEffect, useRef, useState } from 'react'
 import { INK_COLORS } from '../pdf/model'
 import { openSession, SessionError, sendSignature } from '../sign/api'
 import { hasInk } from '../sign/ink'
@@ -37,6 +37,143 @@ function problemFor(error: unknown): State {
     }
   }
   return { phase: 'problem', title: 'No pudimos abrir el enlace', text: 'Vuelve a escanear el código desde la computadora.' }
+}
+
+const LANDSCAPE = '(orientation: landscape)'
+
+function useLandscape() {
+  const [landscape, setLandscape] = useState(() => window.matchMedia(LANDSCAPE).matches)
+  useEffect(() => {
+    const query = window.matchMedia(LANDSCAPE)
+    const update = () => setLandscape(query.matches)
+    query.addEventListener('change', update)
+    return () => query.removeEventListener('change', update)
+  }, [])
+  return landscape
+}
+
+type Turnable = ScreenOrientation & { lock?: (to: 'landscape') => Promise<void>; unlock?: () => void }
+const orientation = () => screen.orientation as Turnable | undefined
+// Android can go full screen and turn itself; iPhone Safari can do neither.
+const canTurnScreen = () => document.fullscreenEnabled && typeof orientation()?.lock === 'function'
+
+async function goFullScreen(turn: boolean) {
+  try {
+    if (document.fullscreenEnabled && !document.fullscreenElement) await document.documentElement.requestFullscreen({ navigationUI: 'hide' })
+    if (turn && document.fullscreenElement) await orientation()?.lock?.('landscape')
+  } catch {
+    // The stage covers the screen either way.
+  }
+}
+
+function leaveFullScreen() {
+  try {
+    orientation()?.unlock?.()
+  } catch {
+    // Nothing was locked.
+  }
+  if (document.fullscreenElement) void document.exitFullscreen().catch(() => {})
+}
+
+function TurnPrompt({ landscape, started, onOpen }: { landscape: boolean; started: boolean; onOpen: (turn: boolean) => void }) {
+  const turnable = canTurnScreen()
+  return (
+    <div className="phone-turn">
+      <span className="phone-turn__art" data-landscape={landscape} aria-hidden>
+        <DeviceMobile size={56} />
+      </span>
+      {landscape ? (
+        <>
+          <h2 className="phone-turn__title">{started ? 'Tu firma sigue aquí' : 'Firma en pantalla completa'}</h2>
+          <p className="phone-turn__text">El área para firmar ocupa toda la pantalla.</p>
+          <button type="button" className="btn btn-primary btn-lg" onClick={() => onOpen(false)}>
+            {started ? 'Seguir firmando' : 'Abrir área de firma'}
+          </button>
+        </>
+      ) : (
+        <>
+          <h2 className="phone-turn__title">Gira tu celular</h2>
+          <p className="phone-turn__text">En horizontal, el área para firmar ocupa toda la pantalla.</p>
+          {turnable ? (
+            <button type="button" className="btn btn-primary btn-lg" onClick={() => onOpen(true)}>
+              Girar la pantalla
+            </button>
+          ) : null}
+          <button type="button" className="btn btn-outline btn-lg" onClick={() => onOpen(false)}>
+            {started ? 'Seguir firmando' : 'Firmar en vertical'}
+          </button>
+        </>
+      )}
+    </div>
+  )
+}
+
+interface StageProps {
+  open: boolean
+  name: string
+  sending: boolean
+  error: string
+  strokes: number
+  padRef: Ref<PadHandle>
+  onStrokes: (count: number) => void
+  onUndo: () => void
+  onClear: () => void
+  onUse: () => void
+  onClose: () => void
+}
+
+// Stays mounted while hidden, so closing it or turning the phone keeps the strokes.
+function SignStage({ open, name, sending, error, strokes, padRef, onStrokes, onUndo, onClear, onUse, onClose }: StageProps) {
+  const box = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!open) return
+    box.current?.focus()
+    const root = document.documentElement
+    const before = root.style.overflow
+    root.style.overflow = 'hidden'
+    return () => {
+      root.style.overflow = before
+    }
+  }, [open])
+  return (
+    <div
+      ref={box}
+      className="phone-stage"
+      data-open={open}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Firma en pantalla completa"
+      tabIndex={-1}
+      inert={!open}
+      onKeyDown={(e) => e.key === 'Escape' && onClose()}
+    >
+      <div className="phone-stage__bar">
+        <button type="button" className="icon-btn" onClick={onClose} aria-label="Salir de pantalla completa">
+          <X size={22} aria-hidden />
+        </button>
+        <p className="phone-stage__doc">
+          Para <strong>{name}</strong>
+        </p>
+        <button type="button" className="btn btn-quiet phone-stage__undo" onClick={onUndo} disabled={!strokes || sending} aria-label="Deshacer">
+          <ArrowCounterClockwise size={20} aria-hidden />
+          <span>Deshacer</span>
+        </button>
+        <button type="button" className="btn btn-quiet" onClick={onClear} disabled={!strokes || sending}>
+          Borrar
+        </button>
+        <button type="button" className="btn btn-primary" onClick={onUse} disabled={!strokes || sending}>
+          {sending ? <span className="spinner" aria-hidden /> : null}
+          Usar firma
+        </button>
+      </div>
+      {error ? (
+        <p className="phone-stage__error" role="alert">
+          {error}
+        </p>
+      ) : null}
+      <SignaturePad ref={padRef} color={INK_COLORS.blue} label="Área para firmar con el dedo" hint="Firma con el dedo sobre la línea" onChange={onStrokes} className="phone-stage__pad" />
+    </div>
+  )
 }
 
 // The photo is shrunk here before it travels; the computer removes the
@@ -106,6 +243,30 @@ export default function PhoneSign() {
   const link = useRef(parseLink())
   const [mode, setMode] = useState<'draw' | 'photo'>('draw')
   const [photo, setPhoto] = useState<string | null>(null)
+  const landscape = useLandscape()
+  const [stage, setStage] = useState(false)
+  const signing = state.phase === 'ready' || state.phase === 'sending'
+
+  // Turning the phone sideways opens the full-screen pad; closing it there keeps it closed.
+  const sideways = landscape && signing && mode === 'draw'
+  const wasSideways = useRef(false)
+  useEffect(() => {
+    if (sideways && !wasSideways.current) setStage(true)
+    wasSideways.current = sideways
+  }, [sideways])
+
+  useEffect(() => {
+    if (state.phase === 'sent' || state.phase === 'problem') leaveFullScreen()
+  }, [state.phase])
+
+  const openStage = (turn: boolean) => {
+    void goFullScreen(turn)
+    setStage(true)
+  }
+  const closeStage = () => {
+    setStage(false)
+    leaveFullScreen()
+  }
 
   useEffect(() => {
     document.title = 'Firmar con InkTap'
@@ -153,7 +314,7 @@ export default function PhoneSign() {
       setState({ phase: 'sent' })
     } catch (error) {
       if (error instanceof SessionError && error.reason === 'network') {
-        setSendError('No se pudo enviar. Revisa tu conexión y vuelve a tocar Enviar firma.')
+        setSendError(`No se pudo enviar. Revisa tu conexión y vuelve a tocar ${mode === 'photo' ? 'Usar foto' : 'Usar firma'}.`)
         setState({ ...state, phase: 'ready' })
       } else setState(problemFor(error))
     }
@@ -161,7 +322,7 @@ export default function PhoneSign() {
 
   return (
     <div className="phone-page">
-      <header className="phone-page__bar">
+      <header className="phone-page__bar" inert={stage && signing}>
         <Logo />
       </header>
 
@@ -173,7 +334,7 @@ export default function PhoneSign() {
       ) : null}
 
       {state.phase === 'ready' || state.phase === 'sending' ? (
-        <main className="phone-page__sign">
+        <main className="phone-page__sign" inert={stage}>
           <div className="phone-page__head">
             <h1 className="phone-page__title">Firma aquí</h1>
             <p className="phone-page__doc">
@@ -191,10 +352,7 @@ export default function PhoneSign() {
             ]}
           />
           {mode === 'draw' ? (
-            <>
-              <SignaturePad ref={pad} color={INK_COLORS.blue} label="Área para firmar con el dedo" hint="Firma con el dedo sobre la línea" onChange={setStrokes} className="phone-page__pad" />
-              <p className="phone-page__tip">Gira el teléfono para tener más espacio.</p>
-            </>
+            <TurnPrompt landscape={landscape} started={strokes > 0} onOpen={openStage} />
           ) : (
             <PhotoPick photo={photo} onPhoto={setPhoto} onError={setSendError} />
           )}
@@ -203,18 +361,7 @@ export default function PhoneSign() {
               {sendError}
             </p>
           ) : null}
-          <div className="phone-page__actions">
-            {mode === 'draw' ? (
-              <>
-                <button type="button" className="btn btn-outline btn-lg" onClick={() => pad.current?.undo()} disabled={!strokes || state.phase === 'sending'}>
-                  <ArrowCounterClockwise size={20} aria-hidden />
-                  Deshacer
-                </button>
-                <button type="button" className="btn btn-outline btn-lg" onClick={() => pad.current?.clear()} disabled={!strokes || state.phase === 'sending'}>
-                  Borrar
-                </button>
-              </>
-            ) : null}
+          {mode === 'photo' || strokes > 0 ? (
             <button
               type="button"
               className="btn btn-primary btn-lg phone-page__send"
@@ -222,14 +369,30 @@ export default function PhoneSign() {
               disabled={(mode === 'draw' ? !strokes : !photo) || state.phase === 'sending'}
             >
               {state.phase === 'sending' ? <span className="spinner" aria-hidden /> : null}
-              {mode === 'draw' ? 'Enviar firma' : 'Enviar foto'}
+              {mode === 'draw' ? 'Usar firma' : 'Usar foto'}
             </button>
-          </div>
+          ) : null}
           <p className="phone-page__privacy">
             <LockSimple size={16} weight="fill" aria-hidden />
             La firma viaja cifrada; el servidor no puede verla.
           </p>
         </main>
+      ) : null}
+
+      {(state.phase === 'ready' || state.phase === 'sending') && mode === 'draw' ? (
+        <SignStage
+          open={stage}
+          name={state.name}
+          sending={state.phase === 'sending'}
+          error={sendError}
+          strokes={strokes}
+          padRef={pad}
+          onStrokes={setStrokes}
+          onUndo={() => pad.current?.undo()}
+          onClear={() => pad.current?.clear()}
+          onUse={send}
+          onClose={closeStage}
+        />
       ) : null}
 
       {state.phase === 'sent' ? (
