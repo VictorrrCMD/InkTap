@@ -25,7 +25,7 @@ Rellena formularios PDF y fírmalos en el navegador: con el mouse, escribiendo t
 
 Las páginas `/legal/terminos`, `/legal/privacidad`, `/legal/cookies` y `/legal/uso-responsable` describen cómo funciona InkTap de verdad (qué se queda en el equipo, qué pasa por el servidor al firmar desde el celular, qué guarda el navegador). Están enlazadas desde el pie del inicio y desde la página del celular.
 
-Antes de publicar, completa en `src/legal/owner.ts` el nombre o razón social del responsable, su domicilio, un correo de contacto y la ciudad de los tribunales. Mientras falte alguno, las páginas lo muestran como pendiente en lugar de inventarlo. Conviene que un abogado revise los textos.
+Los textos no identifican a un responsable: presentan InkTap como una herramienta y dejan la responsabilidad del uso en quien la usa. Esa misma nota aparece en cada página legal, en el pie del inicio, en el diálogo de firma y en la página del celular (`TOOL_NOTICE` en `src/legal/owner.ts`). Conviene que un abogado revise los textos.
 
 ## Correrlo en tu computadora
 

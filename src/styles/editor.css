@@ -2494,12 +2494,14 @@ dialog.sheet[open]::backdrop {
 }
 
 .legal__notice {
-  margin: 0 0 20px;
-  padding: 12px 14px;
-  border-radius: 10px;
-  background: #fff3cd;
-  color: #5c4300;
-  font-size: 14.5px;
+  margin: 0 0 14px;
+  padding: 10px 14px;
+  border-left: 3px solid var(--accent);
+  border-radius: 0 10px 10px 0;
+  background: var(--accent-soft);
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 550;
   line-height: 1.5;
 }
 
@@ -2554,15 +2556,6 @@ dialog.sheet[open]::backdrop {
 
 .legal__doc strong {
   color: var(--ink);
-}
-
-.legal__pending {
-  padding: 1px 6px;
-  border-radius: 6px;
-  background: #fff3cd;
-  color: #5c4300;
-  font-weight: 600;
-  font-size: 0.92em;
 }
 
 .legal__table-wrap {
@@ -2638,9 +2631,34 @@ dialog.sheet[open]::backdrop {
   }
 }
 
+.phone-page__foot {
+  margin-top: 12px;
+  text-align: center;
+}
+
+.phone-page__foot p {
+  max-width: 40ch;
+  margin: 0 auto;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ink-3);
+}
+
 .phone-page__legal {
   justify-content: center;
-  margin-top: 8px;
+}
+
+.sign__notice {
+  flex-basis: 100%;
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--ink-3);
+}
+
+.sign__notice a {
+  color: var(--accent-text);
+  font-weight: 600;
 }
 
 .photo-edit__consent {

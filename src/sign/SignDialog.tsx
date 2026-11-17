@@ -10,6 +10,7 @@ import { Segmented } from '../ui/Segmented'
 import { inkToSignature, SCRIPT_FONTS, typedSignature, type Ink, type ScriptFontId } from './ink'
 import { dataUrlToBlob } from './photo'
 import { PhotoPanel } from './PhotoPanel'
+import { legalHref, TOOL_NOTICE } from '../legal/owner'
 import { QrCode } from './QrCode'
 import { forgetSignature, keepSignature, loadSaved } from './saved'
 import { SignatureArt } from './SignatureArt'
@@ -195,6 +196,12 @@ function SignBody({ titleId, docName, session, onClose, onPick }: Omit<Props, 'o
               Usar firma
             </button>
           </div>
+          <p className="sign__notice">
+            {TOOL_NOTICE}{' '}
+            <a href={legalHref('uso-responsable')} target="_blank" rel="noopener">
+              Uso responsable
+            </a>
+          </p>
         </footer>
       ) : null}
     </form>

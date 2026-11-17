@@ -10,6 +10,7 @@ import { SignaturePad, type PadHandle } from '../sign/SignaturePad'
 import type { PhoneMeta, PhonePayload } from '../sign/usePhoneSession'
 import { Logo } from '../ui/Logo'
 import { LegalLinks } from '../legal/LegalLinks'
+import { TOOL_NOTICE } from '../legal/owner'
 
 type State =
   | { phase: 'checking' }
@@ -412,7 +413,10 @@ export default function PhoneSign() {
         </main>
       ) : null}
 
-      <LegalLinks newTab className="phone-page__legal" />
+      <footer className="phone-page__foot">
+        <p>{TOOL_NOTICE}</p>
+        <LegalLinks newTab className="phone-page__legal" />
+      </footer>
     </div>
   )
 }

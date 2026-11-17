@@ -1,17 +1,7 @@
-// Who answers for InkTap in the legal pages. Fill these in before publishing:
-// while one is empty, the pages show it as pending instead of inventing it.
-export const OWNER = {
-  // Full name of the person, or the company's legal name (razón social).
-  name: '',
-  // Address for legal notices (domicilio para oír y recibir notificaciones).
-  address: '',
-  // Contact for privacy requests and reports of misuse.
-  email: '',
-  // City whose courts settle disputes, e.g. "Ciudad de México".
-  city: '',
-}
-
 export const UPDATED = '17 de noviembre de 2026'
+
+// Shown on every legal page and wherever people sign.
+export const TOOL_NOTICE = 'InkTap es una herramienta. Quien la usa es responsable de los documentos que firma y del uso que da a cada firma.'
 
 export const LEGAL_LINKS = [
   { slug: 'terminos', title: 'Términos y condiciones', short: 'Términos' },

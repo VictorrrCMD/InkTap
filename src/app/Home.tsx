@@ -4,7 +4,7 @@ import { useTheme } from '../lib/theme'
 import { ThemeToggle } from './TopBar'
 import { Logo } from '../ui/Logo'
 import { LegalLinks } from '../legal/LegalLinks'
-import { legalHref } from '../legal/owner'
+import { legalHref, TOOL_NOTICE } from '../legal/owner'
 
 const SigningDemo = lazy(() => import('../demo/SigningDemo'))
 
@@ -152,7 +152,7 @@ export function Home({ error, loading, password, onFile, onPassword, onCancelPas
 
       <footer className="home__foot">
         <p>
-          Al usar InkTap aceptas los <a href={legalHref('terminos')}>Términos y condiciones</a> y el <a href={legalHref('privacidad')}>Aviso de privacidad</a>.
+          {TOOL_NOTICE} Al usarla aceptas los <a href={legalHref('terminos')}>Términos y condiciones</a> y el <a href={legalHref('privacidad')}>Aviso de privacidad</a>.
         </p>
         <LegalLinks />
       </footer>

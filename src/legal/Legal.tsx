@@ -1,8 +1,8 @@
 import { useEffect } from 'react'
 import { ThemeToggle } from '../app/TopBar'
 import { Logo } from '../ui/Logo'
-import { DOCS, missingOwner } from './docs'
-import { legalHref, LEGAL_LINKS, UPDATED, type LegalSlug } from './owner'
+import { DOCS } from './docs'
+import { legalHref, LEGAL_LINKS, TOOL_NOTICE, UPDATED, type LegalSlug } from './owner'
 
 function current(): (typeof LEGAL_LINKS)[number] {
   const slug = location.pathname.replace(/^\/legal\/?/, '').replace(/\/$/, '')
@@ -39,11 +39,9 @@ export default function Legal() {
         <main className="legal__doc">
           <h1>{doc.title}</h1>
           <p className="legal__updated">Última actualización: {UPDATED}</p>
-          {missingOwner.length ? (
-            <p className="legal__notice" role="note">
-              Faltan datos del responsable de InkTap. Los campos marcados como pendientes deben completarse antes de publicar el sitio.
-            </p>
-          ) : null}
+          <p className="legal__notice" role="note">
+            {TOOL_NOTICE}
+          </p>
           <Body />
         </main>
       </div>

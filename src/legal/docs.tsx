@@ -1,23 +1,5 @@
 import type { ReactNode } from 'react'
-import { legalHref, OWNER } from './owner'
-
-type OwnerField = keyof typeof OWNER
-
-const LABELS: Record<OwnerField, string> = {
-  name: 'nombre del responsable',
-  address: 'domicilio',
-  email: 'correo de contacto',
-  city: 'ciudad de los tribunales',
-}
-
-export const missingOwner = (Object.keys(OWNER) as OwnerField[]).filter((k) => !OWNER[k])
-
-function Owner({ field }: { field: OwnerField }) {
-  const value = OWNER[field]
-  if (!value) return <mark className="legal__pending">Pendiente: {LABELS[field]}</mark>
-  if (field === 'email') return <a href={`mailto:${value}`}>{value}</a>
-  return <>{value}</>
-}
+import { legalHref } from './owner'
 
 const To = ({ slug, children }: { slug: Parameters<typeof legalHref>[0]; children: ReactNode }) => <a href={legalHref(slug)}>{children}</a>
 
@@ -25,8 +7,17 @@ function Terms() {
   return (
     <>
       <p className="legal__lead">
-        InkTap es una herramienta web para rellenar formularios PDF y ponerles tu firma. Funciona dentro de tu navegador: tus documentos, tus firmas y lo que escribes se
-        quedan en tu equipo. Al usar InkTap aceptas estos términos y el <To slug="privacidad">Aviso de privacidad</To>.
+        Con InkTap rellenas formularios PDF y les pones tu firma desde el navegador: tus documentos, tus firmas y lo que escribes se quedan en tu equipo. Al usar InkTap aceptas estos términos y el <To slug="privacidad">Aviso de privacidad</To>.
+      </p>
+
+      <h2>InkTap es una herramienta</h2>
+      <p>
+        InkTap solo pone a tu alcance funciones para llenar y firmar documentos en tu propio equipo. No interviene en tus documentos, no conoce su contenido, no verifica
+        identidades y no participa en los acuerdos que firmes.
+      </p>
+      <p>
+        <strong>Quien usa InkTap es el único responsable</strong> de los documentos que llena y firma, de las firmas que usa, de tener derecho a usarlas y de cumplir la
+        ley que aplique a cada documento.
       </p>
 
       <h2>Qué es la firma que pones con InkTap</h2>
@@ -74,13 +65,13 @@ function Terms() {
 
       <h2>Limitación de responsabilidad</h2>
       <p>
-        En la medida en que la ley lo permita, el responsable de InkTap no responde por el contenido de los documentos, por su validez legal, por decisiones que tomes con
-        base en ellos ni por el uso indebido que otras personas hagan de la herramienta.
+        InkTap se ofrece sin garantías. En la medida en que la ley lo permita, quienes desarrollan y ofrecen InkTap no responden por el contenido de los documentos, por
+        su validez legal, por las decisiones que se tomen con base en ellos ni por el uso indebido de la herramienta.
       </p>
 
       <h2>Propiedad intelectual</h2>
       <p>
-        Tus documentos y tus firmas son tuyos; usar InkTap no le da a nadie derechos sobre ellos. El nombre y los logotipos de InkTap pertenecen a su titular.
+        Tus documentos y tus firmas son tuyos; usar InkTap no le da a nadie derechos sobre ellos. El nombre y los logotipos de InkTap pertenecen a sus titulares.
       </p>
       <p>InkTap usa software de terceros, cada uno con su propia licencia:</p>
       <ul>
@@ -95,14 +86,7 @@ function Terms() {
       <p>Si estos términos cambian, publicaremos la nueva versión en esta página con su fecha de actualización.</p>
 
       <h2>Ley aplicable</h2>
-      <p>
-        Estos términos se rigen por las leyes de los Estados Unidos Mexicanos. Cualquier controversia se resolverá ante los tribunales competentes de <Owner field="city" />.
-      </p>
-
-      <h2>Contacto</h2>
-      <p>
-        Responsable: <Owner field="name" />. Correo: <Owner field="email" />.
-      </p>
+      <p>Estos términos se interpretan conforme a las leyes de los Estados Unidos Mexicanos.</p>
     </>
   )
 }
@@ -116,10 +100,10 @@ function Privacy() {
         un equipo al otro, el servidor no puede leerla y se borra en cuanto llega.
       </p>
 
-      <h2>Responsable</h2>
+      <h2>InkTap no recopila tus datos</h2>
       <p>
-        El responsable del tratamiento de tus datos personales es <Owner field="name" />, con domicilio en <Owner field="address" />. Para cualquier asunto sobre este
-        aviso escribe a <Owner field="email" />.
+        InkTap es una herramienta que funciona en tu navegador. No tiene cuentas de usuario, no recibe tus documentos ni tus firmas y no guarda información tuya que
+        pueda leer. No existe una base de datos con información de quienes la usan.
       </p>
 
       <h2>Lo que se queda en tu equipo</h2>
@@ -170,15 +154,10 @@ function Privacy() {
         eso se procesa en tu equipo y, cuando viaja desde el celular, va cifrada.
       </p>
 
-      <h2>Tus derechos</h2>
+      <h2>Tú controlas tu información</h2>
       <p>
-        Tienes derecho a saber qué datos tuyos se tratan, a corregirlos, a pedir que se eliminen y a oponerte a su uso (derechos ARCO), así como a revocar tu
-        consentimiento. Como InkTap no conserva datos que pueda leer, normalmente no habrá información tuya que entregar o borrar; las firmas guardadas en tu navegador
-        las eliminas tú desde la pestaña Guardadas.
-      </p>
-      <p>
-        Para ejercer cualquiera de estos derechos escribe a <Owner field="email" /> con tu nombre, el derecho que quieres ejercer y un medio para responderte. Te
-        contestaremos en los plazos que marca la Ley Federal de Protección de Datos Personales en Posesión de los Particulares.
+        Como InkTap no conserva datos tuyos que pueda leer, no hay información personal que consultar, corregir o borrar en sus servidores. Lo que guarda tu navegador lo
+        controlas tú: las firmas recordadas se eliminan desde la pestaña Guardadas, y todo lo demás al borrar los datos de este sitio en tu navegador.
       </p>
 
       <h2>Cambios a este aviso</h2>
@@ -240,7 +219,7 @@ function Responsible() {
   return (
     <>
       <p className="legal__lead">
-        Una firma compromete a quien la pone. InkTap hace fácil firmar, incluso desde una foto, así que pide a todos usarlo con honestidad.
+        Una firma compromete a quien la pone. InkTap es una herramienta que hace fácil firmar, incluso desde una foto; la responsabilidad de cada firma es de quien la usa.
       </p>
 
       <h2>Reglas básicas</h2>
@@ -272,8 +251,8 @@ function Responsible() {
 
       <h2>Si alguien usó tu firma sin permiso</h2>
       <p>
-        Acude a las autoridades (por ejemplo, la fiscalía de tu estado) con el documento en cuestión. Como InkTap no guarda copias de documentos, no puede rastrearlos ni
-        entregarlos. Puedes reportar un uso indebido de la herramienta a <Owner field="email" />.
+        Acude a las autoridades (por ejemplo, la fiscalía de tu estado) con el documento en cuestión. Como InkTap no guarda copias de documentos ni registro de quién
+        firmó qué, no puede rastrearlos ni entregarlos.
       </p>
 
       <h2>Para cuidar tu firma</h2>

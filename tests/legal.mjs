@@ -7,6 +7,7 @@ const BASE = process.env.BASE_URL ?? 'http://127.0.0.1:5173'
 const OUT = process.env.OUT_DIR ?? './'
 const FIX = new URL('./fixtures/', import.meta.url).pathname.replace(/^\/([A-Z]:)/, '$1')
 mkdirSync(OUT, { recursive: true })
+const TOOL = 'InkTap es una herramienta. Quien la usa es responsable'
 const problems = []
 const log = []
 const check = (ok, label) => {
@@ -33,6 +34,7 @@ for (const [slug, title] of pages) {
   check((await page.locator(`.legal__nav a[aria-current="page"]`).textContent()) === title, `${slug}: nav marks the page`)
   const text = await page.locator('.legal__doc').innerText()
   check(!/[—–]/.test(text), `${slug}: no long dashes`)
+  check(text.includes(TOOL) && !/Pendiente/i.test(text), `${slug}: tool notice, nothing pending`)
   await page.screenshot({ path: `${OUT}legal-${slug}.png`, fullPage: true })
 }
 await page.goto(`${BASE}/legal`)
@@ -46,11 +48,16 @@ check(new URL(page.url()).pathname === '/', 'logo on a legal page goes home')
 check(await page.getByText('Todo se queda en tu equipo').isVisible(), 'home shows the privacy promise')
 const footLinks = await page.locator('.home__foot .legal-links a').allTextContents()
 check(footLinks.join(',') === 'Términos,Privacidad,Cookies,Uso responsable', `home footer links: ${footLinks.join(', ')}`)
+check((await page.locator('.home__foot').innerText()).includes(TOOL), 'home footer carries the tool notice')
 await page.screenshot({ path: OUT + 'legal-home.png' })
 
 // Editor: the logo goes home, through the confirm when there is unsaved work.
 await page.locator('input[type=file]').setInputFiles(FIX + 'formulario.pdf')
 await page.locator('.page canvas').first().waitFor()
+await page.getByRole('button', { name: 'Firmar', exact: true }).click()
+check((await page.locator('.sign__notice').innerText()).includes(TOOL), 'sign dialog carries the tool notice')
+await page.screenshot({ path: OUT + 'legal-dialog.png' })
+await page.keyboard.press('Escape')
 await page.getByRole('button', { name: 'Ir al inicio' }).click()
 await page.locator('.home__intro').waitFor()
 check(true, 'editor logo goes home when nothing changed')
@@ -69,6 +76,9 @@ await phone.locator('.page canvas').first().waitFor()
 check(await phone.locator('.topbar__logo-mark').isVisible(), 'phone editor shows the symbol')
 check(!(await phone.locator('.topbar__logo').isVisible()), 'phone editor hides the full logo')
 await phone.screenshot({ path: OUT + 'legal-phone-editor.png', clip: { x: 0, y: 0, width: 390, height: 120 } })
+await phone.goto(BASE + '/s/AAAAAAAAAAAAAAAAAAAAAA#' + 'A'.repeat(43))
+await phone.locator('.phone-page__foot').waitFor()
+check((await phone.locator('.phone-page__foot').innerText()).includes(TOOL), 'phone page carries the tool notice')
 await phone.goto(BASE + '/legal/privacidad')
 await phone.locator('.legal__doc h1').waitFor()
 const overflow = await phone.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
